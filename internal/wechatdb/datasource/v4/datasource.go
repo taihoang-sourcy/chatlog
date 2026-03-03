@@ -57,7 +57,7 @@ var Groups = []*dbm.Group{
 	},
 }
 
-// MessageDBInfo 存储消息数据库的信息
+// MessageDBInfo stores message database info
 type MessageDBInfo struct {
 	FilePath  string
 	StartTime time.Time
@@ -68,7 +68,7 @@ type DataSource struct {
 	path string
 	dbm  *dbm.DBManager
 
-	// 消息数据库信息
+	// Message database info
 	messageInfos []MessageDBInfo
 }
 
@@ -122,39 +122,39 @@ func (ds *DataSource) initMessageDbs() error {
 		return err
 	}
 
-	// 处理每个数据库文件
+	// Process each database file
 	infos := make([]MessageDBInfo, 0)
 	for _, filePath := range dbPaths {
 		db, err := ds.dbm.OpenDB(filePath)
 		if err != nil {
-			log.Err(err).Msgf("获取数据库 %s 失败", filePath)
+			log.Err(err).Msgf("failed to get database %s", filePath)
 			continue
 		}
 
-		// 获取 Timestamp 表中的开始时间
+		// Get start time from Timestamp table
 		var startTime time.Time
 		var timestamp int64
 
 		row := db.QueryRow("SELECT timestamp FROM Timestamp LIMIT 1")
 		if err := row.Scan(&timestamp); err != nil {
-			log.Err(err).Msgf("获取数据库 %s 的时间戳失败", filePath)
+			log.Err(err).Msgf("failed to get timestamp from database %s", filePath)
 			continue
 		}
 		startTime = time.Unix(timestamp, 0)
 
-		// 保存数据库信息
+		// Save database info
 		infos = append(infos, MessageDBInfo{
 			FilePath:  filePath,
 			StartTime: startTime,
 		})
 	}
 
-	// 按照 StartTime 排序数据库文件
+	// Sort database files by StartTime
 	sort.Slice(infos, func(i, j int) bool {
 		return infos[i].StartTime.Before(infos[j].StartTime)
 	})
 
-	// 设置结束时间
+	// Set end time
 	for i := range infos {
 		if i == len(infos)-1 {
 			infos[i].EndTime = time.Now().Add(time.Hour)
@@ -170,7 +170,7 @@ func (ds *DataSource) initMessageDbs() error {
 	return nil
 }
 
-// getDBInfosForTimeRange 获取时间范围内的数据库信息
+// getDBInfosForTimeRange gets database info for the time range
 func (ds *DataSource) getDBInfosForTimeRange(startTime, endTime time.Time) []MessageDBInfo {
 	var dbs []MessageDBInfo
 	for _, info := range ds.messageInfos {
@@ -186,22 +186,22 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 		return nil, errors.ErrTalkerEmpty
 	}
 
-	// 解析talker参数，支持多个talker（以英文逗号分隔）
+	// Parse talker param, supports multiple talkers (comma-separated)
 	talkers := util.Str2List(talker, ",")
 	if len(talkers) == 0 {
 		return nil, errors.ErrTalkerEmpty
 	}
 
-	// 找到时间范围内的数据库文件
+	// Find database files in time range
 	dbInfos := ds.getDBInfosForTimeRange(startTime, endTime)
 	if len(dbInfos) == 0 {
 		return nil, errors.TimeRangeNotFound(startTime, endTime)
 	}
 
-	// 解析sender参数，支持多个发送者（以英文逗号分隔）
+	// Parse sender param, supports multiple senders (comma-separated)
 	senders := util.Str2List(sender, ",")
 
-	// 预编译正则表达式（如果有keyword）
+	// Precompile regex (if keyword provided)
 	var regex *regexp.Regexp
 	if keyword != "" {
 		var err error
@@ -211,29 +211,29 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 		}
 	}
 
-	// 从每个相关数据库中查询消息，并在读取时进行过滤
+	// Query messages from each relevant database, filter while reading
 	filteredMessages := []*model.Message{}
 
 	for _, dbInfo := range dbInfos {
-		// 检查上下文是否已取消
+		// Check if context is cancelled
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 
 		db, err := ds.dbm.OpenDB(dbInfo.FilePath)
 		if err != nil {
-			log.Error().Msgf("数据库 %s 未打开", dbInfo.FilePath)
+			log.Error().Msgf("database %s not opened", dbInfo.FilePath)
 			continue
 		}
 
-		// 对每个talker进行查询
+		// Query for each talker
 		for _, talkerItem := range talkers {
-			// 构建表名
+			// Build table name
 			_talkerMd5Bytes := md5.Sum([]byte(talkerItem))
 			talkerMd5 := hex.EncodeToString(_talkerMd5Bytes[:])
 			tableName := "Msg_" + talkerMd5
 
-			// 检查表是否存在
+			// Check if table exists
 			var exists bool
 			err = db.QueryRowContext(ctx,
 				"SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
@@ -241,13 +241,13 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 
 			if err != nil {
 				if err == sql.ErrNoRows {
-					// 表不存在，继续下一个talker
+					// Table does not exist, skip to next talker
 					continue
 				}
 				return nil, errors.QueryFailed("", err)
 			}
 
-			// 构建查询条件
+			// Build query conditions
 			conditions := []string{"create_time >= ? AND create_time <= ?"}
 			args := []interface{}{startTime.Unix(), endTime.Unix()}
 			log.Debug().Msgf("Table name: %s", tableName)
@@ -261,18 +261,18 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 				ORDER BY m.sort_seq ASC
 			`, tableName, strings.Join(conditions, " AND "))
 
-			// 执行查询
+			// Execute query
 			rows, err := db.QueryContext(ctx, query, args...)
 			if err != nil {
-				// 如果表不存在，SQLite 会返回错误
+				// If table does not exist, SQLite will return error
 				if strings.Contains(err.Error(), "no such table") {
 					continue
 				}
-				log.Err(err).Msgf("从数据库 %s 查询消息失败", dbInfo.FilePath)
+				log.Err(err).Msgf("failed to query messages from database %s", dbInfo.FilePath)
 				continue
 			}
 
-			// 处理查询结果，在读取时进行过滤
+			// Process query results, filter while reading
 			for rows.Next() {
 				var msg model.MessageV4
 				err := rows.Scan(
@@ -290,10 +290,10 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 					return nil, errors.ScanRowFailed(err)
 				}
 
-				// 将消息转换为标准格式
+				// Convert message to standard format
 				message := msg.Wrap(talkerItem)
 
-				// 应用sender过滤
+				// Apply sender filter
 				if len(senders) > 0 {
 					senderMatch := false
 					for _, s := range senders {
@@ -303,32 +303,32 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 						}
 					}
 					if !senderMatch {
-						continue // 不匹配sender，跳过此消息
+						continue // Sender mismatch, skip message
 					}
 				}
 
-				// 应用keyword过滤
+				// Apply keyword filter
 				if regex != nil {
 					plainText := message.PlainTextContent()
 					if !regex.MatchString(plainText) {
-						continue // 不匹配keyword，跳过此消息
+						continue // Keyword mismatch, skip message
 					}
 				}
 
-				// 通过所有过滤条件，保留此消息
+				// Passed all filters, keep message
 				filteredMessages = append(filteredMessages, message)
 
-				// 检查是否已经满足分页处理数量
+				// Check if pagination limit reached
 				if limit > 0 && len(filteredMessages) >= offset+limit {
-					// 已经获取了足够的消息，可以提前返回
+					// Got enough messages, can return early
 					rows.Close()
 
-					// 对所有消息按时间排序
+					// Sort all messages by time
 					sort.Slice(filteredMessages, func(i, j int) bool {
 						return filteredMessages[i].Seq < filteredMessages[j].Seq
 					})
 
-					// 处理分页
+					// Handle pagination
 					if offset >= len(filteredMessages) {
 						return []*model.Message{}, nil
 					}
@@ -343,12 +343,12 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 		}
 	}
 
-	// 对所有消息按时间排序
+	// Sort all messages by time
 	sort.Slice(filteredMessages, func(i, j int) bool {
 		return filteredMessages[i].Seq < filteredMessages[j].Seq
 	})
 
-	// 处理分页
+	// Handle pagination
 	if limit > 0 {
 		if offset >= len(filteredMessages) {
 			return []*model.Message{}, nil
@@ -363,23 +363,23 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 	return filteredMessages, nil
 }
 
-// 联系人
+// Contacts
 func (ds *DataSource) GetContacts(ctx context.Context, key string, limit, offset int) ([]*model.Contact, error) {
 	var query string
 	var args []interface{}
 
 	if key != "" {
-		// 按照关键字查询
+		// Query by keyword
 		query = `SELECT username, local_type, alias, remark, nick_name 
 				FROM contact 
 				WHERE username = ? OR alias = ? OR remark = ? OR nick_name = ?`
 		args = []interface{}{key, key, key, key}
 	} else {
-		// 查询所有联系人
+		// Query all contacts
 		query = `SELECT username, local_type, alias, remark, nick_name FROM contact`
 	}
 
-	// 添加排序、分页
+	// Add sorting and pagination
 	query += ` ORDER BY username`
 	if limit > 0 {
 		query += fmt.Sprintf(" LIMIT %d", limit)
@@ -420,7 +420,7 @@ func (ds *DataSource) GetContacts(ctx context.Context, key string, limit, offset
 	return contacts, nil
 }
 
-// 群聊
+// Chat rooms
 func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offset int) ([]*model.ChatRoom, error) {
 	var query string
 	var args []interface{}
@@ -432,7 +432,7 @@ func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offse
 	}
 
 	if key != "" {
-		// 按照关键字查询
+		// Query by keyword
 		query = `SELECT username, owner, ext_buffer FROM chat_room WHERE username = ?`
 		args = []interface{}{key}
 
@@ -458,11 +458,11 @@ func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offse
 			chatRooms = append(chatRooms, chatRoomV4.Wrap())
 		}
 
-		// 如果没有找到群聊，尝试通过联系人查找
+		// If chat room not found, try looking up via contacts
 		if len(chatRooms) == 0 {
 			contacts, err := ds.GetContacts(ctx, key, 1, 0)
 			if err == nil && len(contacts) > 0 && strings.HasSuffix(contacts[0].UserName, "@chatroom") {
-				// 再次尝试通过用户名查找群聊
+				// Try again to find chat room by username
 				rows, err := db.QueryContext(ctx,
 					`SELECT username, owner, ext_buffer FROM chat_room WHERE username = ?`,
 					contacts[0].UserName)
@@ -487,7 +487,7 @@ func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offse
 					chatRooms = append(chatRooms, chatRoomV4.Wrap())
 				}
 
-				// 如果群聊记录不存在，但联系人记录存在，创建一个模拟的群聊对象
+				// If chat room record doesn't exist but contact record does, create a mock chat room object
 				if len(chatRooms) == 0 {
 					chatRooms = append(chatRooms, &model.ChatRoom{
 						Name:             contacts[0].UserName,
@@ -500,10 +500,10 @@ func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offse
 
 		return chatRooms, nil
 	} else {
-		// 查询所有群聊
+		// Query all chat rooms
 		query = `SELECT username, owner, ext_buffer FROM chat_room`
 
-		// 添加排序、分页
+		// Add sorting and pagination
 		query += ` ORDER BY username`
 		if limit > 0 {
 			query += fmt.Sprintf(" LIMIT %d", limit)
@@ -512,7 +512,7 @@ func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offse
 			}
 		}
 
-		// 执行查询
+		// Execute query
 		rows, err := db.QueryContext(ctx, query, args...)
 		if err != nil {
 			return nil, errors.QueryFailed(query, err)
@@ -539,26 +539,26 @@ func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offse
 	}
 }
 
-// 最近会话
+// Recent sessions
 func (ds *DataSource) GetSessions(ctx context.Context, key string, limit, offset int) ([]*model.Session, error) {
 	var query string
 	var args []interface{}
 
 	if key != "" {
-		// 按照关键字查询
+		// Query by keyword
 		query = `SELECT username, summary, last_timestamp, last_msg_sender, last_sender_display_name 
 				FROM SessionTable 
 				WHERE username = ? OR last_sender_display_name = ?
 				ORDER BY sort_timestamp DESC`
 		args = []interface{}{key, key}
 	} else {
-		// 查询所有会话
+		// Query all sessions
 		query = `SELECT username, summary, last_timestamp, last_msg_sender, last_sender_display_name 
 				FROM SessionTable 
 				ORDER BY sort_timestamp DESC`
 	}
 
-	// 添加分页
+	// Add pagination
 	if limit > 0 {
 		query += fmt.Sprintf(" LIMIT %d", limit)
 		if offset > 0 {
@@ -607,7 +607,7 @@ func (ds *DataSource) GetMedia(ctx context.Context, _type string, key string) (*
 	switch _type {
 	case "image":
 		table = "image_hardlink_info_v3"
-		// 4.1.0 版本开始使用 v4 表
+		// v4 table used since version 4.1.0
 		if !ds.IsExist(Media, table) {
 			table = "image_hardlink_info_v4"
 		}
@@ -673,7 +673,7 @@ func (ds *DataSource) GetMedia(ctx context.Context, _type string, key string) (*
 		mediaV4.Type = _type
 		media = mediaV4.Wrap()
 
-		// 优先返回高清图
+		// Prefer returning HD image
 		if _type == "image" && strings.HasSuffix(mediaV4.Name, "_h.dat") {
 			break
 		}

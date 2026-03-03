@@ -15,22 +15,22 @@ import (
 
 type DataSource interface {
 
-	// 消息
+	// Messages
 	GetMessages(ctx context.Context, startTime, endTime time.Time, talker string, sender string, keyword string, limit, offset int) ([]*model.Message, error)
 
-	// 联系人
+	// Contacts
 	GetContacts(ctx context.Context, key string, limit, offset int) ([]*model.Contact, error)
 
-	// 群聊
+	// Chat rooms
 	GetChatRooms(ctx context.Context, key string, limit, offset int) ([]*model.ChatRoom, error)
 
-	// 最近会话
+	// Recent sessions
 	GetSessions(ctx context.Context, key string, limit, offset int) ([]*model.Session, error)
 
-	// 媒体
+	// Media
 	GetMedia(ctx context.Context, _type string, key string) (*model.Media, error)
 
-	// 设置回调函数
+	// Set callback function
 	SetCallback(group string, callback func(event fsnotify.Event) error) error
 
 	Close() error

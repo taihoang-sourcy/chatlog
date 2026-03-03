@@ -5,7 +5,7 @@ import (
 )
 
 func Decompress(src []byte) ([]byte, error) {
-	// FIXME: lz4 的压缩率预计不到 3，这里设置了 4 保险一点
+	// FIXME: lz4 compression ratio is expected to be less than 3, set to 4 for safety margin
 	out := make([]byte, len(src)*4)
 
 	n, err := lz4.UncompressBlock(src, out)

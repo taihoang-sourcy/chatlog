@@ -11,7 +11,7 @@ import (
 	"github.com/sjzar/chatlog/internal/model"
 )
 
-// initChatRoomCache 初始化群聊缓存
+// initChatRoomCache initializes chat room cache
 func (r *Repository) initChatRoomCache(ctx context.Context) error {
 
 	chatRoomMap := make(map[string]*model.ChatRoom)
@@ -21,15 +21,15 @@ func (r *Repository) initChatRoomCache(ctx context.Context) error {
 	chatRoomRemark := make([]string, 0)
 	chatRoomNickName := make([]string, 0)
 
-	// 加载所有群聊到缓存
-	// 暂时忽略获取不到群聊的错误
+	// Load all chat rooms into cache
+	// Temporarily ignore errors when chat rooms cannot be fetched
 	chatRooms, err := r.ds.GetChatRooms(ctx, "", 0, 0)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to load chat rooms")
 	}
 
 	for _, chatRoom := range chatRooms {
-		// 补充群聊信息（从联系人中获取 Remark 和 NickName）
+		// Enrich chat room info (get Remark and NickName from contacts)
 		r.enrichChatRoom(chatRoom)
 		chatRoomMap[chatRoom.Name] = chatRoom
 		chatRoomList = append(chatRoomList, chatRoom.Name)
@@ -143,7 +143,7 @@ func (r *Repository) GetChatRoom(ctx context.Context, key string) (*model.ChatRo
 	return chatRoom, nil
 }
 
-// enrichChatRoom 从联系人信息中补充群聊信息
+// enrichChatRoom enriches chat room info from contact info
 func (r *Repository) enrichChatRoom(chatRoom *model.ChatRoom) {
 	if contact, ok := r.contactCache[chatRoom.Name]; ok {
 		chatRoom.Remark = contact.Remark

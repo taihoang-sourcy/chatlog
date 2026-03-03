@@ -11,12 +11,12 @@ import (
 func IsNormalString(b []byte) bool {
 	str := string(b)
 
-	// 检查是否为有效的 UTF-8
+	// Check if valid UTF-8
 	if !utf8.ValidString(str) {
 		return false
 	}
 
-	// 检查是否全部为可打印字符
+	// Check if all characters are printable
 	for _, r := range str {
 		if !unicode.IsPrint(r) {
 			return false

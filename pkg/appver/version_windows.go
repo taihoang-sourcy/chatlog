@@ -13,7 +13,7 @@ var (
 	procVerQueryValue          = modversion.NewProc("VerQueryValueW")
 )
 
-// VS_FIXEDFILEINFO 结构体
+// VS_FIXEDFILEINFO struct
 type VS_FIXEDFILEINFO struct {
 	Signature        uint32
 	StrucVersion     uint32
@@ -30,15 +30,15 @@ type VS_FIXEDFILEINFO struct {
 	FileDateLS       uint32
 }
 
-// initialize 初始化版本信息
+// initialize initializes version info
 func (i *Info) initialize() error {
-	// 转换路径为 UTF16
+	// Convert path to UTF16
 	pathPtr, err := syscall.UTF16PtrFromString(i.FilePath)
 	if err != nil {
 		return err
 	}
 
-	// 获取版本信息大小
+	// Get version info size
 	var handle uintptr
 	size, _, err := procGetFileVersionInfoSize.Call(
 		uintptr(unsafe.Pointer(pathPtr)),
@@ -48,7 +48,7 @@ func (i *Info) initialize() error {
 		return fmt.Errorf("GetFileVersionInfoSize failed: %v", err)
 	}
 
-	// 分配内存
+	// Allocate memory
 	verInfo := make([]byte, size)
 	ret, _, err := procGetFileVersionInfo.Call(
 		uintptr(unsafe.Pointer(pathPtr)),
@@ -60,7 +60,7 @@ func (i *Info) initialize() error {
 		return fmt.Errorf("GetFileVersionInfo failed: %v", err)
 	}
 
-	// 获取固定的文件信息
+	// Get fixed file info
 	var fixedFileInfo *VS_FIXEDFILEINFO
 	var uLen uint32
 	rootPtr, _ := syscall.UTF16PtrFromString("\\")
@@ -74,7 +74,7 @@ func (i *Info) initialize() error {
 		return fmt.Errorf("VerQueryValue failed: %v", err)
 	}
 
-	// 解析文件版本
+	// Parse file version
 	i.FullVersion = fmt.Sprintf("%d.%d.%d.%d",
 		(fixedFileInfo.FileVersionMS>>16)&0xffff,
 		(fixedFileInfo.FileVersionMS>>0)&0xffff,
@@ -90,7 +90,7 @@ func (i *Info) initialize() error {
 		(fixedFileInfo.ProductVersionLS>>0)&0xffff,
 	)
 
-	// 获取翻译信息
+	// Get translation info
 	type langAndCodePage struct {
 		language uint16
 		codePage uint16
@@ -107,7 +107,7 @@ func (i *Info) initialize() error {
 	)
 
 	if ret != 0 && cbTranslate > 0 {
-		// 获取所有需要的字符串信息
+		// Get all required string info
 		stringInfos := map[string]*string{
 			"CompanyName":     &i.CompanyName,
 			"FileDescription": &i.FileDescription,

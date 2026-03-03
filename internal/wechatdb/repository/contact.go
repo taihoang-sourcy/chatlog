@@ -11,7 +11,7 @@ import (
 	"github.com/sjzar/chatlog/internal/model"
 )
 
-// initContactCache 初始化联系人缓存
+// initContactCache initializes contact cache
 func (r *Repository) initContactCache(ctx context.Context) error {
 
 	contactMap := make(map[string]*model.Contact)
@@ -25,8 +25,8 @@ func (r *Repository) initContactCache(ctx context.Context) error {
 	remarkList := make([]string, 0)
 	nickNameList := make([]string, 0)
 
-	// 加载所有联系人到缓存
-	// 暂时忽略获取不到联系人的错误
+	// Load all contacts into cache
+	// Temporarily ignore errors when contacts cannot be fetched
 	contacts, err := r.ds.GetContacts(ctx, "", 0, 0)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to load contacts")
@@ -36,7 +36,7 @@ func (r *Repository) initContactCache(ctx context.Context) error {
 		contactMap[contact.UserName] = contact
 		contactList = append(contactList, contact.UserName)
 
-		// 建立快速查找索引
+		// Build fast lookup index
 		if contact.Alias != "" {
 			alias, ok := aliasMap[contact.Alias]
 			if !ok {
@@ -65,7 +65,7 @@ func (r *Repository) initContactCache(ctx context.Context) error {
 			nickNameList = append(nickNameList, contact.NickName)
 		}
 
-		// 如果是群聊成员（非好友），添加到群聊成员索引
+		// If chat room member (non-friend), add to chat room member index
 		if !contact.IsFriend {
 			chatRoomUserMap[contact.UserName] = contact
 		}
@@ -94,7 +94,7 @@ func (r *Repository) initContactCache(ctx context.Context) error {
 }
 
 func (r *Repository) GetContact(ctx context.Context, key string) (*model.Contact, error) {
-	// 先尝试从缓存中获取
+	// Try to get from cache first
 	contact := r.findContact(key)
 	if contact == nil {
 		return nil, errors.ContactNotFound(key)
@@ -237,14 +237,14 @@ func (r *Repository) findContacts(key string) []*model.Contact {
 	return ret
 }
 
-// getFullContact 获取联系人信息，包括群聊成员
+// getFullContact gets contact info including chat room members
 func (r *Repository) getFullContact(userName string) *model.Contact {
-	// 先查找联系人缓存
+	// First lookup contact cache
 	if contact, ok := r.contactCache[userName]; ok {
 		return contact
 	}
 
-	// 再查找群聊成员缓存
+	// Then lookup chat room member cache
 	contact, ok := r.chatRoomUserToInfo[userName]
 
 	if ok {

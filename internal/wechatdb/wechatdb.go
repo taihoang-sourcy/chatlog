@@ -28,7 +28,7 @@ func New(path string, platform string, version int) (*DB, error) {
 		version:  version,
 	}
 
-	// 初始化，加载数据库文件信息
+	// Initialize, load database file info
 	if err := w.Initialize(); err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (w *DB) Initialize() error {
 func (w *DB) GetMessages(start, end time.Time, talker string, sender string, keyword string, limit, offset int) ([]*model.Message, error) {
 	ctx := context.Background()
 
-	// 使用 repository 获取消息
+	// Use repository to get messages
 	messages, err := w.repo.GetMessages(ctx, start, end, talker, sender, keyword, limit, offset)
 	if err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ type GetSessionsResp struct {
 func (w *DB) GetSessions(key string, limit, offset int) (*GetSessionsResp, error) {
 	ctx := context.Background()
 
-	// 使用 repository 获取会话列表
+	// Use repository to get session list
 	sessions, err := w.repo.GetSessions(ctx, key, limit, offset)
 	if err != nil {
 		return nil, err

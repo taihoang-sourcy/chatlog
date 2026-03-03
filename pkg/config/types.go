@@ -106,7 +106,7 @@ func StringToStructHookFunc() mapstructure.DecodeHookFunc {
 	}
 }
 
-// CompositeDecodeHook 组合所有解码钩子
+// CompositeDecodeHook combines all decode hooks
 func CompositeDecodeHook() mapstructure.DecodeHookFunc {
 	return mapstructure.ComposeDecodeHookFunc(
 		mapstructure.StringToTimeDurationHookFunc(),

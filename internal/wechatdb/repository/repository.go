@@ -11,7 +11,7 @@ import (
 	"github.com/sjzar/chatlog/internal/wechatdb/datasource"
 )
 
-// Repository 实现了 repository.Repository 接口
+// Repository implements the repository.Repository interface
 type Repository struct {
 	ds datasource.DataSource
 
@@ -34,11 +34,11 @@ type Repository struct {
 	chatRoomRemark     []string
 	chatRoomNickName   []string
 
-	// 快速查找索引
+	// Fast lookup index
 	chatRoomUserToInfo map[string]*model.Contact
 }
 
-// New 创建一个新的 Repository
+// New creates a new Repository
 func New(ds datasource.DataSource) (*Repository, error) {
 	r := &Repository{
 		ds:                 ds,
@@ -59,7 +59,7 @@ func New(ds datasource.DataSource) (*Repository, error) {
 		chatRoomNickName:   make([]string, 0),
 	}
 
-	// 初始化缓存
+	// Initialize cache
 	if err := r.initCache(context.Background()); err != nil {
 		return nil, errors.InitCacheFailed(err)
 	}
@@ -70,14 +70,14 @@ func New(ds datasource.DataSource) (*Repository, error) {
 	return r, nil
 }
 
-// initCache 初始化缓存
+// initCache initializes cache
 func (r *Repository) initCache(ctx context.Context) error {
-	// 初始化联系人缓存
+	// Initialize contact cache
 	if err := r.initContactCache(ctx); err != nil {
 		return err
 	}
 
-	// 初始化群聊缓存
+	// Initialize chat room cache
 	if err := r.initChatRoomCache(ctx); err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (r *Repository) chatroomCallback(event fsnotify.Event) error {
 	return nil
 }
 
-// Close 实现 Repository 接口的 Close 方法
+// Close implements Repository interface's Close method
 func (r *Repository) Close() error {
 	return r.ds.Close()
 }

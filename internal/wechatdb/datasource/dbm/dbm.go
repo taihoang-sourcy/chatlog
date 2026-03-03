@@ -123,13 +123,13 @@ func (d *DBManager) OpenDB(path string) (*sql.DB, error) {
 	if runtime.GOOS == "windows" {
 		tempPath, err = filecopy.GetTempCopy(d.id, path)
 		if err != nil {
-			log.Err(err).Msgf("获取临时拷贝文件 %s 失败", path)
+			log.Err(err).Msgf("failed to get temp copy of file %s", path)
 			return nil, err
 		}
 	}
 	db, err = sql.Open("sqlite3", tempPath)
 	if err != nil {
-		log.Err(err).Msgf("连接数据库 %s 失败", path)
+		log.Err(err).Msgf("failed to connect to database %s", path)
 		return nil, err
 	}
 	d.mutex.Lock()

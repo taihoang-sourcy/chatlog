@@ -13,7 +13,7 @@ func TestTimeOf(t *testing.T) {
 		wantTime time.Time
 		wantOk   bool
 	}{
-		// 空输入
+		// Empty input
 		{
 			name:     "empty string",
 			input:    "",
@@ -27,11 +27,11 @@ func TestTimeOf(t *testing.T) {
 			wantOk:   false,
 		},
 
-		// 自然语言时间
+		// Natural language time
 		{
 			name:   "now",
 			input:  "now",
-			wantOk: true, // 不检查具体时间，因为会随运行时间变化
+			wantOk: true, // Don't check exact time, varies with run time
 		},
 		{
 			name:   "today",
@@ -79,7 +79,7 @@ func TestTimeOf(t *testing.T) {
 			wantOk: true,
 		},
 
-		// 相对时间
+		// Relative time
 		{
 			name:   "1h-ago",
 			input:  "1h-ago",
@@ -124,16 +124,16 @@ func TestTimeOf(t *testing.T) {
 		{
 			name:   "0d-ago",
 			input:  "0d-ago",
-			wantOk: true, // 应该是今天
+			wantOk: true, // Should be today
 		},
 		{
 			name:     "-1d-ago",
 			input:    "-1d-ago",
 			wantTime: time.Time{},
-			wantOk:   false, // 负数应该无效
+			wantOk:   false, // Negative numbers should be invalid
 		},
 
-		// 季度
+		// Quarter
 		{
 			name:     "2020Q1",
 			input:    "2020Q1",
@@ -159,25 +159,25 @@ func TestTimeOf(t *testing.T) {
 			wantOk:   true,
 		},
 		{
-			name:     "2020Q5", // 无效季度
+			name:     "2020Q5", // Invalid quarter
 			input:    "2020Q5",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "1969Q1", // 早于1970年
+			name:     "1969Q1", // Before 1970
 			input:    "1969Q1",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "10000Q1", // 超过9999年
+			name:     "10000Q1", // Beyond 9999
 			input:    "10000Q1",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 
-		// 年份
+		// Year
 		{
 			name:     "2020",
 			input:    "2020",
@@ -185,37 +185,37 @@ func TestTimeOf(t *testing.T) {
 			wantOk:   true,
 		},
 		{
-			name:     "1970", // 最早有效年份
+			name:     "1970", // Earliest valid year
 			input:    "1970",
 			wantTime: time.Date(1970, 1, 1, 0, 0, 0, 0, time.Local),
 			wantOk:   true,
 		},
 		{
-			name:     "9999", // 最晚有效年份
+			name:     "9999", // Latest valid year
 			input:    "9999",
 			wantTime: time.Date(9999, 1, 1, 0, 0, 0, 0, time.Local),
 			wantOk:   true,
 		},
 		{
-			name:     "1969", // 早于1970年
+			name:     "1969", // Before 1970
 			input:    "1969",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "10000", // 超过9999年
+			name:     "10000", // Beyond 9999
 			input:    "10000",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "202", // 不是4位数字
+			name:     "202", // Not 4 digits
 			input:    "202",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 
-		// 月份
+		// Month
 		{
 			name:     "202001",
 			input:    "202001",
@@ -241,37 +241,37 @@ func TestTimeOf(t *testing.T) {
 			wantOk:   true,
 		},
 		{
-			name:     "202013", // 无效月份
+			name:     "202013", // Invalid month
 			input:    "202013",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "2020-13", // 无效月份
+			name:     "2020-13", // Invalid month
 			input:    "2020-13",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "2020-00", // 无效月份
+			name:     "2020-00", // Invalid month
 			input:    "2020-00",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "196912", // 早于1970年
+			name:     "196912", // Before 1970
 			input:    "196912",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "1969-12", // 早于1970年
+			name:     "1969-12", // Before 1970
 			input:    "1969-12",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 
-		// 日期格式
+		// Date format
 		{
 			name:     "20200101",
 			input:    "20200101",
@@ -297,55 +297,55 @@ func TestTimeOf(t *testing.T) {
 			wantOk:   true,
 		},
 		{
-			name:     "20200229", // 闰年2月29日
+			name:     "20200229", // Leap year Feb 29
 			input:    "20200229",
 			wantTime: time.Date(2020, 2, 29, 0, 0, 0, 0, time.Local),
 			wantOk:   true,
 		},
 		{
-			name:     "20190229", // 非闰年2月29日
+			name:     "20190229", // Non-leap year Feb 29
 			input:    "20190229",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "20200230", // 无效日期
+			name:     "20200230", // Invalid date
 			input:    "20200230",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "2020-02-30", // 无效日期
+			name:     "2020-02-30", // Invalid date
 			input:    "2020-02-30",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "20200000", // 无效日期
+			name:     "20200000", // Invalid date
 			input:    "20200000",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "20200132", // 无效日期
+			name:     "20200132", // Invalid date
 			input:    "20200132",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "19691231", // 早于1970年
+			name:     "19691231", // Before 1970
 			input:    "19691231",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "1969-12-31", // 早于1970年
+			name:     "1969-12-31", // Before 1970
 			input:    "1969-12-31",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 
-		// 带时间的日期
+		// Date with time
 		{
 			name:     "20200101/12:34",
 			input:    "20200101/12:34",
@@ -359,37 +359,37 @@ func TestTimeOf(t *testing.T) {
 			wantOk:   true,
 		},
 		{
-			name:     "20200101/24:00", // 无效时间
+			name:     "20200101/24:00", // Invalid time
 			input:    "20200101/24:00",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "20200101/12:60", // 无效时间
+			name:     "20200101/12:60", // Invalid time
 			input:    "20200101/12:60",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "20200101/12:34:56", // 不支持的格式
+			name:     "20200101/12:34:56", // Unsupported format
 			input:    "20200101/12:34:56",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "20200101/12-34", // 不支持的格式
+			name:     "20200101/12-34", // Unsupported format
 			input:    "20200101/12-34",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "19691231/12:34", // 早于1970年
+			name:     "19691231/12:34", // Before 1970
 			input:    "19691231/12:34",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 
-		// 完整时间
+		// Full datetime
 		{
 			name:     "20200101120000",
 			input:    "20200101120000",
@@ -403,43 +403,43 @@ func TestTimeOf(t *testing.T) {
 			wantOk:   true,
 		},
 		{
-			name:     "20200101240000", // 无效时间
+			name:     "20200101240000", // Invalid time
 			input:    "20200101240000",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "20200101126000", // 无效时间
+			name:     "20200101126000", // Invalid time
 			input:    "20200101126000",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "20200101120060", // 无效时间
+			name:     "20200101120060", // Invalid time
 			input:    "20200101120060",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "2020010112000", // 长度不对
+			name:     "2020010112000", // Wrong length
 			input:    "2020010112000",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "202001011200000", // 长度不对
+			name:     "202001011200000", // Wrong length
 			input:    "202001011200000",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "19691231235959", // 早于1970年
+			name:     "19691231235959", // Before 1970
 			input:    "19691231235959",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 
-		// 时间戳(秒)
+		// Timestamp (seconds)
 		{
 			name:     "1577836800", // 2020-01-01 00:00:00
 			input:    "1577836800",
@@ -453,19 +453,19 @@ func TestTimeOf(t *testing.T) {
 			wantOk:   true,
 		},
 		{
-			name:     "999999999", // 小于1000000000
+			name:     "999999999", // Less than 1000000000
 			input:    "999999999",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "253402300800", // 大于253402300799
+			name:     "253402300800", // Greater than 253402300799
 			input:    "253402300800",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "abc", // 非数字
+			name:     "abc", // Non-numeric
 			input:    "abc",
 			wantTime: time.Time{},
 			wantOk:   false,
@@ -491,45 +491,45 @@ func TestTimeOf(t *testing.T) {
 			wantOk:   true,
 		},
 		{
-			name:     "2020-01-01T12:00:00", // 缺少时区
+			name:     "2020-01-01T12:00:00", // Missing timezone
 			input:    "2020-01-01T12:00:00",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "2020-01-01 12:00:00Z", // 格式不对
+			name:     "2020-01-01 12:00:00Z", // Wrong format
 			input:    "2020-01-01 12:00:00Z",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 
-		// 边界情况和特殊情况
+		// Edge cases and special cases
 		{
-			name:     "99999", // 不是有效的时间戳
+			name:     "99999", // Not a valid timestamp
 			input:    "99999",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "2020/01/01", // 不支持的格式
+			name:     "2020/01/01", // Unsupported format
 			input:    "2020/01/01",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "01/01/2020", // 不支持的格式
+			name:     "01/01/2020", // Unsupported format
 			input:    "01/01/2020",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "2020-1-1", // 不支持的格式
+			name:     "2020-1-1", // Unsupported format
 			input:    "2020-1-1",
 			wantTime: time.Time{},
 			wantOk:   false,
 		},
 		{
-			name:     "20201-01-01", // 不支持的格式
+			name:     "20201-01-01", // Unsupported format
 			input:    "20201-01-01",
 			wantTime: time.Time{},
 			wantOk:   false,
@@ -546,7 +546,7 @@ func TestTimeOf(t *testing.T) {
 			}
 
 			if !tt.wantOk {
-				return // 不需要检查时间值
+				return // No need to check time value
 			}
 
 			if tt.input == "now" || strings.HasSuffix(tt.input, "-ago") ||
@@ -554,7 +554,7 @@ func TestTimeOf(t *testing.T) {
 				tt.input == "this-week" || tt.input == "last-week" ||
 				tt.input == "this-month" || tt.input == "last-month" ||
 				tt.input == "this-year" || tt.input == "last-year" {
-				// 对于相对时间，不检查具体值
+				// For relative time, don't check exact value
 				return
 			}
 
@@ -573,7 +573,7 @@ func TestTimeRangeOf(t *testing.T) {
 		wantEnd   time.Time
 		wantOk    bool
 	}{
-		// 空输入
+		// Empty input
 		{
 			name:      "empty string",
 			input:     "",
@@ -589,7 +589,7 @@ func TestTimeRangeOf(t *testing.T) {
 			wantOk:    false,
 		},
 
-		// all 特殊情况
+		// all special case
 		{
 			name:      "all",
 			input:     "all",
@@ -605,11 +605,11 @@ func TestTimeRangeOf(t *testing.T) {
 			wantOk:    true,
 		},
 
-		// 相对时间范围
+		// Relative time range
 		{
 			name:   "last-1d",
 			input:  "last-1d",
-			wantOk: true, // 不检查具体时间，因为会随运行时间变化
+			wantOk: true, // Don't check exact time, varies with run time
 		},
 		{
 			name:   "last-7d",
@@ -647,28 +647,28 @@ func TestTimeRangeOf(t *testing.T) {
 			wantOk: true,
 		},
 		{
-			name:      "last-0d", // 无效输入
+			name:      "last-0d", // Invalid input
 			input:     "last-0d",
 			wantStart: time.Time{},
 			wantEnd:   time.Time{},
 			wantOk:    false,
 		},
 		{
-			name:      "last--1d", // 无效输入
+			name:      "last--1d", // Invalid input
 			input:     "last--1d",
 			wantStart: time.Time{},
 			wantEnd:   time.Time{},
 			wantOk:    false,
 		},
 		{
-			name:      "last-1x", // 无效输入
+			name:      "last-1x", // Invalid input
 			input:     "last-1x",
 			wantStart: time.Time{},
 			wantEnd:   time.Time{},
 			wantOk:    false,
 		},
 
-		// 时间区间
+		// Time range
 		{
 			name:      "2020-01-01~2020-01-31",
 			input:     "2020-01-01~2020-01-31",
@@ -698,107 +698,107 @@ func TestTimeRangeOf(t *testing.T) {
 			wantOk:    true,
 		},
 		{
-			name:      "2020-01-31~2020-01-01", // 开始时间晚于结束时间
+			name:      "2020-01-31~2020-01-01", // Start after end
 			input:     "2020-01-31~2020-01-01",
 			wantStart: time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local),
 			wantEnd:   time.Date(2020, 1, 31, 23, 59, 59, 999999999, time.Local),
-			wantOk:    true, // 应该自动交换
+			wantOk:    true, // Should auto-swap
 		},
 		{
-			name:      "2020-01-01~invalid", // 结束时间无效
+			name:      "2020-01-01~invalid", // Invalid end time
 			input:     "2020-01-01~invalid",
 			wantStart: time.Time{},
 			wantEnd:   time.Time{},
 			wantOk:    false,
 		},
 		{
-			name:      "invalid~2020-01-31", // 开始时间无效
+			name:      "invalid~2020-01-31", // Invalid start time
 			input:     "invalid~2020-01-31",
 			wantStart: time.Time{},
 			wantEnd:   time.Time{},
 			wantOk:    false,
 		},
 		{
-			name:      "2020-01-01~2020-02-30", // 结束时间无效日期
+			name:      "2020-01-01~2020-02-30", // Invalid end date
 			input:     "2020-01-01~2020-02-30",
 			wantStart: time.Time{},
 			wantEnd:   time.Time{},
 			wantOk:    false,
 		},
 		{
-			name:      "2020-01-01~", // 缺少结束时间
+			name:      "2020-01-01~", // Missing end time
 			input:     "2020-01-01~",
 			wantStart: time.Time{},
 			wantEnd:   time.Time{},
 			wantOk:    false,
 		},
 		{
-			name:      "~2020-01-31", // 缺少开始时间
+			name:      "~2020-01-31", // Missing start time
 			input:     "~2020-01-31",
 			wantStart: time.Time{},
 			wantEnd:   time.Time{},
 			wantOk:    false,
 		},
 
-		// 单个时间点，根据粒度确定范围
+		// Single time point, range determined by granularity
 		{
-			name:      "2020-01-01", // 精确到天
+			name:      "2020-01-01", // Day precision
 			input:     "2020-01-01",
 			wantStart: time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local),
 			wantEnd:   time.Date(2020, 1, 1, 23, 59, 59, 999999999, time.Local),
 			wantOk:    true,
 		},
 		{
-			name:      "20200101", // 精确到天
+			name:      "20200101", // Day precision
 			input:     "20200101",
 			wantStart: time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local),
 			wantEnd:   time.Date(2020, 1, 1, 23, 59, 59, 999999999, time.Local),
 			wantOk:    true,
 		},
 		{
-			name:      "2020-01", // 精确到月
+			name:      "2020-01", // Month precision
 			input:     "2020-01",
 			wantStart: time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local),
 			wantEnd:   time.Date(2020, 1, 31, 23, 59, 59, 999999999, time.Local),
 			wantOk:    true,
 		},
 		{
-			name:      "202001", // 精确到月
+			name:      "202001", // Month precision
 			input:     "202001",
 			wantStart: time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local),
 			wantEnd:   time.Date(2020, 1, 31, 23, 59, 59, 999999999, time.Local),
 			wantOk:    true,
 		},
 		{
-			name:      "2020Q1", // 精确到季度
+			name:      "2020Q1", // Quarter precision
 			input:     "2020Q1",
 			wantStart: time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local),
 			wantEnd:   time.Date(2020, 3, 31, 23, 59, 59, 999999999, time.Local),
 			wantOk:    true,
 		},
 		{
-			name:      "2020", // 精确到年
+			name:      "2020", // Year precision
 			input:     "2020",
 			wantStart: time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local),
 			wantEnd:   time.Date(2020, 12, 31, 23, 59, 59, 999999999, time.Local),
 			wantOk:    true,
 		},
 		{
-			name:      "2020-01-01/12:34", // 精确到分钟
+			name:      "2020-01-01/12:34", // Minute precision
 			input:     "2020-01-01/12:34",
 			wantStart: time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local),
 			wantEnd:   time.Date(2020, 1, 1, 23, 59, 59, 999999999, time.Local),
 			wantOk:    true,
 		},
 		{
-			name:      "20200101120000", // 精确到秒
+			name:      "20200101120000", // Second precision
 			input:     "20200101120000",
 			wantStart: time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local),
 			wantEnd:   time.Date(2020, 1, 1, 23, 59, 59, 999999999, time.Local),
 			wantOk:    true,
 		},
 		{
-			name:      "1577836800", // 时间戳 2020-01-01 00:00:00
+			name:      "1577836800", // Timestamp for 2020-01-01 00:00:00
 			input:     "1577836800",
 			wantStart: time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local),
 			wantEnd:   time.Date(2020, 1, 1, 23, 59, 59, 999999999, time.Local),
@@ -812,7 +812,7 @@ func TestTimeRangeOf(t *testing.T) {
 			wantOk:    true,
 		},
 
-		// 自然语言时间
+		// Natural language time
 		{
 			name:   "today",
 			input:  "today",
@@ -854,30 +854,30 @@ func TestTimeRangeOf(t *testing.T) {
 			wantOk: true,
 		},
 
-		// 边界情况和特殊情况
+		// Edge cases and special cases
 		{
-			name:      "invalid", // 无效输入
+			name:      "invalid", // Invalid input
 			input:     "invalid",
 			wantStart: time.Time{},
 			wantEnd:   time.Time{},
 			wantOk:    false,
 		},
 		{
-			name:      "2020-02-29", // 闰年2月29日
+			name:      "2020-02-29", // Leap year Feb 29
 			input:     "2020-02-29",
 			wantStart: time.Date(2020, 2, 29, 0, 0, 0, 0, time.Local),
 			wantEnd:   time.Date(2020, 2, 29, 23, 59, 59, 999999999, time.Local),
 			wantOk:    true,
 		},
 		{
-			name:      "2019-02-29", // 非闰年2月29日
+			name:      "2019-02-29", // Non-leap year Feb 29
 			input:     "2019-02-29",
 			wantStart: time.Time{},
 			wantEnd:   time.Time{},
 			wantOk:    false,
 		},
 		{
-			name:      "2020-04-31", // 无效日期
+			name:      "2020-04-31", // Invalid date
 			input:     "2020-04-31",
 			wantStart: time.Time{},
 			wantEnd:   time.Time{},
@@ -895,7 +895,7 @@ func TestTimeRangeOf(t *testing.T) {
 			}
 
 			if !tt.wantOk {
-				return // 不需要检查时间值
+				return // No need to check time value
 			}
 
 			if tt.input == "today" || tt.input == "yesterday" ||
@@ -903,7 +903,7 @@ func TestTimeRangeOf(t *testing.T) {
 				tt.input == "this-month" || tt.input == "last-month" ||
 				tt.input == "this-year" || tt.input == "last-year" ||
 				strings.HasPrefix(tt.input, "last-") {
-				// 对于相对时间，不检查具体值
+				// For relative time, don't check exact value
 				return
 			}
 
@@ -918,30 +918,30 @@ func TestTimeRangeOf(t *testing.T) {
 	}
 }
 
-// 测试边界情况
+// Test edge cases
 func TestTimeOfEdgeCases(t *testing.T) {
-	// 测试非常长的数字字符串
+	// Test very long digit string
 	longDigits := "99999999999999999999999999999999999999"
 	_, ok := TimeOf(longDigits)
 	if ok {
 		t.Errorf("TimeOf(%s) should return false for very long digit string", longDigits)
 	}
 
-	// 测试非常长的字符串
+	// Test very long string
 	longString := strings.Repeat("a", 10000)
 	_, ok = TimeOf(longString)
 	if ok {
 		t.Errorf("TimeOf(%s) should return false for very long string", "very_long_string")
 	}
 
-	// 测试特殊字符
+	// Test special characters
 	specialChars := "!@#$%^&*()"
 	_, ok = TimeOf(specialChars)
 	if ok {
 		t.Errorf("TimeOf(%s) should return false for special characters", specialChars)
 	}
 
-	// 测试SQL注入类字符串
+	// Test SQL injection-like string
 	sqlInjection := "2020-01-01' OR '1'='1"
 	_, ok = TimeOf(sqlInjection)
 	if ok {
@@ -949,9 +949,9 @@ func TestTimeOfEdgeCases(t *testing.T) {
 	}
 }
 
-// 测试时区处理
+// Test timezone handling
 func TestTimeOfTimezones(t *testing.T) {
-	// RFC3339格式的时区处理
+	// RFC3339 format timezone handling
 	utcTime, ok := TimeOf("2020-01-01T12:00:00Z")
 	if !ok {
 		t.Fatalf("TimeOf(2020-01-01T12:00:00Z) failed")
@@ -962,21 +962,21 @@ func TestTimeOfTimezones(t *testing.T) {
 		t.Fatalf("TimeOf(2020-01-01T12:00:00-05:00) failed")
 	}
 
-	// UTC比EST时区快5小时，所以相同时钟时间的UTC应该比EST早5小时
-	// 转换为UTC后比较
+	// UTC is 5 hours ahead of EST, so same clock time in UTC should be 5 hours earlier than EST
+	// Convert to UTC for comparison
 	utcInUTC := utcTime.UTC()
 	estInUTC := estTime.UTC()
 
-	// EST时区是-5小时，所以相同时钟时间的EST转为UTC后应该比UTC的时钟时间多5小时
+	// EST is UTC-5, so same clock time in EST converted to UTC should be 5 hours ahead of UTC clock time
 	hourDiff := estInUTC.Hour() - utcInUTC.Hour()
 	if hourDiff != 5 {
 		t.Errorf("Expected 5 hour difference between UTC and EST, got %v", hourDiff)
 	}
 }
 
-// 测试闰年处理
+// Test leap year handling
 func TestLeapYearHandling(t *testing.T) {
-	// 测试闰年2月29日
+	// Test leap year Feb 29
 	leapDay, ok := TimeOf("20200229")
 	if !ok {
 		t.Fatalf("TimeOf(20200229) failed for leap year")
@@ -985,13 +985,13 @@ func TestLeapYearHandling(t *testing.T) {
 		t.Errorf("Expected 2020-02-29, got %v", leapDay)
 	}
 
-	// 测试非闰年2月29日
+	// Test non-leap year Feb 29
 	_, ok = TimeOf("20190229")
 	if ok {
 		t.Errorf("TimeOf(20190229) should fail for non-leap year")
 	}
 
-	// 测试世纪闰年规则 (2000是闰年，2100不是)
+	// Test century leap year rule (2000 is leap year, 2100 is not)
 	_, ok = TimeOf("20000229")
 	if !ok {
 		t.Errorf("TimeOf(20000229) should succeed for century leap year")

@@ -11,40 +11,40 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// FindFilesWithPatterns 在指定目录下查找匹配多个正则表达式的文件
-// directory: 要搜索的目录路径
-// patterns: 正则表达式模式列表
-// recursive: 是否递归搜索子目录
-// 返回匹配的文件路径列表和可能的错误
+// FindFilesWithPatterns finds files matching the regex pattern in the specified directory
+// directory: path to search
+// pattern: regex pattern
+// recursive: whether to search subdirectories recursively
+// Returns matched file paths and any error
 func FindFilesWithPatterns(directory string, pattern string, recursive bool) ([]string, error) {
-	// 编译所有正则表达式
+	// Compile regex
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		return nil, fmt.Errorf("无效的正则表达式 '%s': %v", pattern, err)
+		return nil, fmt.Errorf("invalid regex '%s': %v", pattern, err)
 	}
 
-	// 检查目录是否存在
+	// Check if directory exists
 	dirInfo, err := os.Stat(directory)
 	if err != nil {
-		return nil, fmt.Errorf("无法访问目录 '%s': %v", directory, err)
+		return nil, fmt.Errorf("cannot access directory '%s': %v", directory, err)
 	}
 	if !dirInfo.IsDir() {
-		return nil, fmt.Errorf("'%s' 不是一个目录", directory)
+		return nil, fmt.Errorf("'%s' is not a directory", directory)
 	}
 
-	// 存储匹配的文件路径
+	// Store matched file paths
 	var matchedFiles []string
 
-	// 创建文件系统
+	// Create file system
 	fsys := os.DirFS(directory)
 
-	// 遍历文件系统
+	// Walk file system
 	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// 如果是目录且不递归，则跳过子目录
+		// If directory and not recursive, skip subdirectories
 		if d.IsDir() {
 			if !recursive && path != "." {
 				return fs.SkipDir
@@ -52,9 +52,9 @@ func FindFilesWithPatterns(directory string, pattern string, recursive bool) ([]
 			return nil
 		}
 
-		// 检查文件名是否匹配任何一个正则表达式
+		// Check if filename matches the regex
 		if re.MatchString(d.Name()) {
-			// 添加完整路径到结果列表
+			// Add full path to result list
 			fullPath := filepath.Join(directory, path)
 			matchedFiles = append(matchedFiles, fullPath)
 		}
@@ -63,7 +63,7 @@ func FindFilesWithPatterns(directory string, pattern string, recursive bool) ([]
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("遍历目录时出错: %v", err)
+		return nil, fmt.Errorf("error walking directory: %v", err)
 	}
 
 	return matchedFiles, nil

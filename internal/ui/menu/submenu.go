@@ -73,7 +73,7 @@ func NewSubMenu(title string) *SubMenu {
 	helpText.SetTextColor(style.DialogFgColor)
 	helpText.SetBackgroundColor(style.DialogBgColor)
 	fmt.Fprintf(helpText,
-		"[%s::b]↑/↓[%s::b]: 导航  [%s::b]Enter[%s::b]: 选择  [%s::b]ESC[%s::b]: 返回",
+		"[%s::b]↑/↓[%s::b]: Navigate  [%s::b]Enter[%s::b]: Select  [%s::b]ESC[%s::b]: Back",
 		style.GetColorHex(style.MenuBgColor), style.GetColorHex(style.PageHeaderFgColor),
 		style.GetColorHex(style.MenuBgColor), style.GetColorHex(style.PageHeaderFgColor),
 		style.GetColorHex(style.MenuBgColor), style.GetColorHex(style.PageHeaderFgColor),
@@ -99,14 +99,14 @@ func NewSubMenu(title string) *SubMenu {
 }
 
 func (m *SubMenu) setTableHeader() {
-	m.table.SetCell(0, 0, tview.NewTableCell(fmt.Sprintf("[%s::b]%s", style.GetColorHex(style.TableHeaderFgColor), "命令")).
+	m.table.SetCell(0, 0, tview.NewTableCell(fmt.Sprintf("[%s::b]%s", style.GetColorHex(style.TableHeaderFgColor), "Command")).
 		SetExpansion(1).
 		SetBackgroundColor(style.TableHeaderBgColor).
 		SetTextColor(style.TableHeaderFgColor).
 		SetAlign(tview.AlignLeft).
 		SetSelectable(false))
 
-	m.table.SetCell(0, 1, tview.NewTableCell(fmt.Sprintf("[%s::b]%s", style.GetColorHex(style.TableHeaderFgColor), "说明")).
+	m.table.SetCell(0, 1, tview.NewTableCell(fmt.Sprintf("[%s::b]%s", style.GetColorHex(style.TableHeaderFgColor), "Description")).
 		SetExpansion(1).
 		SetBackgroundColor(style.TableHeaderBgColor).
 		SetTextColor(style.TableHeaderFgColor).

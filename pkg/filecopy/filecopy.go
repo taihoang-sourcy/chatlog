@@ -558,7 +558,7 @@ func (fm *FileCopyManager) performCacheCleanup() {
 		fm.fileIndex.Delete(entry.key)
 		atomic.AddInt64(&fm.cacheSize, -1)
 
-		// Skip .tmp files (safety check - should not happen but防御性编程)
+		// Skip .tmp files (safety check - should not happen but defensive programming)
 		if strings.Contains(entry.entry.TempPath, ".tmp.") {
 			continue
 		}

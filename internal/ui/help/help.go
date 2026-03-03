@@ -10,57 +10,57 @@ import (
 
 const (
 	Title     = "help"
-	ShowTitle = "帮助"
-	Content   = `[yellow]Chatlog 使用指南[white]
+	ShowTitle = "Help"
+	Content   = `[yellow]Chatlog User Guide[white]
 
-[green]基本操作:[white]
-• 使用 [yellow]←→[white] 键在主菜单和帮助页面之间切换
-• 使用 [yellow]↑↓[white] 键在菜单项之间移动
-• 按 [yellow]Enter[white] 选择菜单项
-• 按 [yellow]Esc[white] 返回上一级菜单
-• 按 [yellow]Ctrl+C[white] 退出程序
+[green]Basic Operations:[white]
+• Use [yellow]←→[white] keys to switch between main menu and help page
+• Use [yellow]↑↓[white] keys to move between menu items
+• Press [yellow]Enter[white] to select a menu item
+• Press [yellow]Esc[white] to return to previous menu
+• Press [yellow]Ctrl+C[white] to exit the program
 
-[green]使用步骤:[white]
+[green]Usage Steps:[white]
 
-[yellow]1. 下载并安装微信客户端[white]
+[yellow]1. Download and install WeChat client[white]
 
-[yellow]2. 迁移手机微信聊天记录[white]
-   手机微信上操作 [yellow]我 - 设置 - 通用 - 聊天记录迁移与备份 - 迁移 - 迁移到电脑[white]。
-   这一步的目的是将手机中的聊天记录传输到电脑上。
-   可以放心操作，不会影响到手机上的聊天记录。
+[yellow]2. Migrate WeChat chat history from phone[white]
+   On mobile WeChat: [yellow]Me - Settings - General - Chat History Migration & Backup - Migrate - Migrate to Computer[white].
+   The purpose of this step is to transfer chat history from your phone to your computer.
+   You can do this safely; it won't affect the chat history on your phone.
 
-[yellow]3. 解密数据[white]
-   重新打开 chatlog，选择"解密数据"菜单项，程序会使用获取的密钥解密微信数据库文件。
-   解密后的文件会保存到工作目录中（可在设置中修改）。
+[yellow]3. Decrypt data[white]
+   Reopen chatlog, select "Decrypt Data" menu item. The program will use the acquired key to decrypt WeChat database files.
+   Decrypted files will be saved to the working directory (can be changed in settings).
 
-[yellow]4. 启动 HTTP 服务[white]
-   选择"启动 HTTP 服务"菜单项，启动 HTTP 和 MCP 服务。
-   启动后可以通过浏览器访问 http://localhost:5030 查看聊天记录。
+[yellow]4. Start HTTP service[white]
+   Select "Start HTTP Service" menu item to start HTTP and MCP services.
+   After starting, visit http://localhost:5030 in your browser to view chat history.
 
-[yellow]5. 设置选项[white]
-   选择"设置"菜单项，可以配置:
-   • HTTP 服务端口 - 更改 HTTP 服务的监听端口
-   • 工作目录 - 更改解密数据的存储位置
+[yellow]5. Settings[white]
+   Select "Settings" menu item to configure:
+   • HTTP service address - Change the HTTP service listening address
+   • Working directory - Change the storage location for decrypted data
 
-[green]HTTP API 使用:[white]
-• 聊天记录: [yellow]GET http://localhost:5030/api/v1/chatlog?time=2023-01-01&talker=wxid_xxx[white]
-• 联系人列表: [yellow]GET http://localhost:5030/api/v1/contact[white]
-• 群聊列表: [yellow]GET http://localhost:5030/api/v1/chatroom[white]
-• 会话列表: [yellow]GET http://localhost:5030/api/v1/session[white]
+[green]HTTP API Usage:[white]
+• Chat history: [yellow]GET http://localhost:5030/api/v1/chatlog?time=2023-01-01&talker=wxid_xxx[white]
+• Contacts: [yellow]GET http://localhost:5030/api/v1/contact[white]
+• Chat rooms: [yellow]GET http://localhost:5030/api/v1/chatroom[white]
+• Sessions: [yellow]GET http://localhost:5030/api/v1/session[white]
 
-[green]MCP 集成:[white]
-Chatlog 支持 Model Context Protocol，可与支持 MCP 的 AI 助手集成。
-通过 MCP，AI 助手可以直接查询您的聊天记录、联系人和群聊信息。
+[green]MCP Integration:[white]
+Chatlog supports Model Context Protocol and can integrate with MCP-enabled AI assistants.
+Through MCP, AI assistants can directly query your chat history, contacts, and chat room information.
 
-[green]常见问题:[white]
-• 如果获取密钥失败，请确保微信程序正在运行
-• 如果解密失败，请检查密钥是否正确获取
-• 如果 HTTP 服务启动失败，请检查端口是否被占用
-• 数据目录和工作目录会自动保存，下次启动时自动加载
+[green]FAQ:[white]
+• If key acquisition fails, ensure WeChat is running
+• If decryption fails, check if the key was correctly acquired
+• If HTTP service fails to start, check if the port is in use
+• Data directory and working directory are saved automatically and loaded on next startup
 
-[green]数据安全:[white]
-• 所有数据处理均在本地完成，不会上传到任何外部服务器
-• 请妥善保管解密后的数据，避免隐私泄露
+[green]Data Security:[white]
+• All data processing is done locally; nothing is uploaded to external servers
+• Please store decrypted data securely to avoid privacy leaks
 `
 )
 

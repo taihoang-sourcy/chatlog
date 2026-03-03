@@ -44,7 +44,7 @@ func New() *Footer {
 		SetBackgroundColor(tview.Styles.PrimitiveBackgroundColor)
 
 	fmt.Fprintf(footer.help,
-		"[%s::b]↑/↓[%s::b]: 导航  [%s::b]←/→[%s::b]: 切换标签  [%s::b]Enter[%s::b]: 选择  [%s::b]ESC[%s::b]: 返回  [%s::b]Ctrl+C[%s::b]: 退出",
+		"[%s::b]↑/↓[%s::b]: Navigate  [%s::b]←/→[%s::b]: Switch tab  [%s::b]Enter[%s::b]: Select  [%s::b]ESC[%s::b]: Back  [%s::b]Ctrl+C[%s::b]: Exit",
 		style.GetColorHex(style.MenuBgColor), style.GetColorHex(style.PageHeaderFgColor),
 		style.GetColorHex(style.MenuBgColor), style.GetColorHex(style.PageHeaderFgColor),
 		style.GetColorHex(style.MenuBgColor), style.GetColorHex(style.PageHeaderFgColor),

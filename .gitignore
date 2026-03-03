@@ -8,6 +8,11 @@
 *.so
 *.dylib
 
+# Go build output
+bin/
+chatlog
+chatlog.exe
+
 # Test binary, built with `go test -c`
 *.test
 
@@ -27,5 +32,5 @@ go.work.sum
 # syncthing files
 .stfolder
 
-chatlog.exe# Added by goreleaser init:
+# Added by goreleaser init
 dist/

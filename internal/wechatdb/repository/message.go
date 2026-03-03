@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// GetMessages 实现 Repository 接口的 GetMessages 方法
+// GetMessages implements Repository interface's GetMessages method
 func (r *Repository) GetMessages(ctx context.Context, startTime, endTime time.Time, talker string, sender string, keyword string, limit, offset int) ([]*model.Message, error) {
 
 	talker, sender = r.parseTalkerAndSender(ctx, talker, sender)
@@ -20,7 +20,7 @@ func (r *Repository) GetMessages(ctx context.Context, startTime, endTime time.Ti
 		return nil, err
 	}
 
-	// 补充消息信息
+	// Enrich message info
 	if err := r.EnrichMessages(ctx, messages); err != nil {
 		log.Debug().Msgf("EnrichMessages failed: %v", err)
 	}
@@ -28,7 +28,7 @@ func (r *Repository) GetMessages(ctx context.Context, startTime, endTime time.Ti
 	return messages, nil
 }
 
-// EnrichMessages 补充消息的额外信息
+// EnrichMessages enriches messages with extra info
 func (r *Repository) EnrichMessages(ctx context.Context, messages []*model.Message) error {
 	for _, msg := range messages {
 		r.enrichMessage(msg)
@@ -36,22 +36,22 @@ func (r *Repository) EnrichMessages(ctx context.Context, messages []*model.Messa
 	return nil
 }
 
-// enrichMessage 补充单条消息的额外信息
+// enrichMessage enriches a single message with extra info
 func (r *Repository) enrichMessage(msg *model.Message) {
-	// 处理群聊消息
+	// Handle chat room messages
 	if msg.IsChatRoom {
-		// 补充群聊名称
+		// Enrich chat room name
 		if chatRoom, ok := r.chatRoomCache[msg.Talker]; ok {
 			msg.TalkerName = chatRoom.DisplayName()
 
-			// 补充发送者在群里的显示名称
+			// Enrich sender's display name in group
 			if displayName, ok := chatRoom.User2DisplayName[msg.Sender]; ok {
 				msg.SenderName = displayName
 			}
 		}
 	}
 
-	// 如果不是自己发送的消息且还没有显示名称，尝试补充发送者信息
+	// If not self-sent and no display name yet, try to enrich sender info
 	if msg.SenderName == "" && !msg.IsSelf {
 		contact := r.getFullContact(msg.Sender)
 		if contact != nil {
@@ -73,7 +73,7 @@ func (r *Repository) parseTalkerAndSender(ctx context.Context, talker, sender st
 				talkers[i] = chatRoom.Name
 			}
 		}
-		// 获取群聊的用户列表
+		// Get chat room user list
 		for i := 0; i < len(talkers); i++ {
 			if chatRoom, _ := r.GetChatRoom(ctx, talkers[i]); chatRoom != nil {
 				for user, displayName := range chatRoom.User2DisplayName {
@@ -93,7 +93,7 @@ func (r *Repository) parseTalkerAndSender(ctx context.Context, talker, sender st
 			if user, ok := displayName2User[senders[i]]; ok {
 				senders[i] = user
 			} else {
-				// FIXME 大量群聊用户名称重复，无法直接通过 GetContact 获取 ID，后续再优化
+				// FIXME Many chat room users have duplicate names, cannot get ID via GetContact directly, optimize later
 				for user := range users {
 					if contact := r.getFullContact(user); contact != nil {
 						if contact.DisplayName() == senders[i] {

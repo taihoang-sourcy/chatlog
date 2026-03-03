@@ -60,14 +60,14 @@ func New(title string) *Menu {
 }
 
 func (m *Menu) setTableHeader() {
-	m.table.SetCell(0, 0, tview.NewTableCell(fmt.Sprintf("[black::b]%s", "命令")).
+	m.table.SetCell(0, 0, tview.NewTableCell(fmt.Sprintf("[black::b]%s", "Command")).
 		SetExpansion(1).
 		SetBackgroundColor(style.PageHeaderBgColor).
 		SetTextColor(style.PageHeaderFgColor).
 		SetAlign(tview.AlignLeft).
 		SetSelectable(false))
 
-	m.table.SetCell(0, 1, tview.NewTableCell(fmt.Sprintf("[black::b]%s", "说明")).
+	m.table.SetCell(0, 1, tview.NewTableCell(fmt.Sprintf("[black::b]%s", "Description")).
 		SetExpansion(2).
 		SetBackgroundColor(style.PageHeaderBgColor).
 		SetTextColor(style.PageHeaderFgColor).

@@ -72,7 +72,7 @@ func NewForm(title string) *Form {
 	f.helpText.SetTextColor(style.DialogFgColor)
 	f.helpText.SetBackgroundColor(style.DialogBgColor)
 	fmt.Fprintf(f.helpText,
-		"[%s::b]Tab[%s::b]: 导航  [%s::b]Enter[%s::b]: 选择  [%s::b]ESC[%s::b]: 返回",
+		"[%s::b]Tab[%s::b]: Navigate  [%s::b]Enter[%s::b]: Select  [%s::b]ESC[%s::b]: Back",
 		style.GetColorHex(style.MenuBgColor), style.GetColorHex(style.PageHeaderFgColor),
 		style.GetColorHex(style.MenuBgColor), style.GetColorHex(style.PageHeaderFgColor),
 		style.GetColorHex(style.MenuBgColor), style.GetColorHex(style.PageHeaderFgColor),

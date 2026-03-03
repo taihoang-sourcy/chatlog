@@ -9,33 +9,33 @@ import (
 
 var zoneStr = time.Now().Format("-0700")
 
-// 时间粒度常量
+// Time granularity constants
 type TimeGranularity int
 
 const (
-	GranularityUnknown TimeGranularity = iota // 未知粒度
-	GranularitySecond                         // 精确到秒
-	GranularityMinute                         // 精确到分钟
-	GranularityHour                           // 精确到小时
-	GranularityDay                            // 精确到天
-	GranularityMonth                          // 精确到月
-	GranularityQuarter                        // 精确到季度
-	GranularityYear                           // 精确到年
+	GranularityUnknown TimeGranularity = iota // unknown granularity
+	GranularitySecond                         // precise to second
+	GranularityMinute                         // precise to minute
+	GranularityHour                           // precise to hour
+	GranularityDay                            // precise to day
+	GranularityMonth                          // precise to month
+	GranularityQuarter                        // precise to quarter
+	GranularityYear                           // precise to year
 )
 
-// timeOf 内部函数，解析各种格式的时间点，并返回时间粒度
-// 支持以下格式:
-// 1. 时间戳(秒): 1609459200 (GranularitySecond)
-// 2. 标准日期: 20060102, 2006-01-02 (GranularityDay)
-// 3. 带时间的日期: 20060102/15:04, 2006-01-02/15:04 (GranularityMinute)
-// 4. 完整时间: 20060102150405 (GranularitySecond)
+// timeOf internal function, parses various time point formats and returns time granularity
+// Supported formats:
+// 1. Timestamp (seconds): 1609459200 (GranularitySecond)
+// 2. Standard date: 20060102, 2006-01-02 (GranularityDay)
+// 3. Date with time: 20060102/15:04, 2006-01-02/15:04 (GranularityMinute)
+// 4. Full datetime: 20060102150405 (GranularitySecond)
 // 5. RFC3339: 2006-01-02T15:04:05Z07:00 (GranularitySecond)
-// 6. 相对时间: 5h-ago, 3d-ago, 1w-ago, 1m-ago, 1y-ago (根据单位确定粒度)
-// 7. 自然语言: now (GranularitySecond), today, yesterday (GranularityDay)
-// 8. 年份: 2006 (GranularityYear)
-// 9. 月份: 200601, 2006-01 (GranularityMonth)
-// 10. 季度: 2006Q1, 2006Q2, 2006Q3, 2006Q4 (GranularityQuarter)
-// 11. 年月日时分: 200601021504 (GranularityMinute)
+// 6. Relative time: 5h-ago, 3d-ago, 1w-ago, 1m-ago, 1y-ago (granularity determined by unit)
+// 7. Natural language: now (GranularitySecond), today, yesterday (GranularityDay)
+// 8. Year: 2006 (GranularityYear)
+// 9. Month: 200601, 2006-01 (GranularityMonth)
+// 10. Quarter: 2006Q1, 2006Q2, 2006Q3, 2006Q4 (GranularityQuarter)
+// 11. Year-month-day-hour-minute: 200601021504 (GranularityMinute)
 func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 	if str == "" {
 		return time.Time{}, GranularityUnknown, false
@@ -43,7 +43,7 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 
 	str = strings.TrimSpace(str)
 
-	// 处理自然语言时间
+	// Handle natural language time
 	switch strings.ToLower(str) {
 	case "now":
 		return time.Now(), GranularitySecond, true
@@ -56,19 +56,19 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 	case "this-week":
 		now := time.Now()
 		weekday := int(now.Weekday())
-		if weekday == 0 { // 周日
+		if weekday == 0 { // Sunday
 			weekday = 7
 		}
-		// 本周一
+		// This week's Monday
 		monday := now.AddDate(0, 0, -(weekday - 1))
 		return time.Date(monday.Year(), monday.Month(), monday.Day(), 0, 0, 0, 0, now.Location()), GranularityDay, true
 	case "last-week":
 		now := time.Now()
 		weekday := int(now.Weekday())
-		if weekday == 0 { // 周日
+		if weekday == 0 { // Sunday
 			weekday = 7
 		}
-		// 上周一
+		// Last week's Monday
 		lastMonday := now.AddDate(0, 0, -(weekday-1)-7)
 		return time.Date(lastMonday.Year(), lastMonday.Month(), lastMonday.Day(), 0, 0, 0, 0, now.Location()), GranularityDay, true
 	case "this-month":
@@ -84,21 +84,21 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 		now := time.Now()
 		return time.Date(now.Year()-1, 1, 1, 0, 0, 0, 0, now.Location()), GranularityYear, true
 	case "all":
-		// 返回零值时间
+		// Return zero time
 		return time.Time{}, GranularityYear, true
 	}
 
-	// 处理相对时间: 5h-ago, 3d-ago, 1w-ago, 1m-ago, 1y-ago
+	// Handle relative time: 5h-ago, 3d-ago, 1w-ago, 1m-ago, 1y-ago
 	if strings.HasSuffix(str, "-ago") {
 		str = strings.TrimSuffix(str, "-ago")
 
-		// 特殊处理 0d-ago 为当天开始
+		// Special handling: 0d-ago means start of today
 		if str == "0d" {
 			now := time.Now()
 			return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()), GranularityDay, true
 		}
 
-		// 解析数字和单位
+		// Parse number and unit
 		re := regexp.MustCompile(`^(\d+)([hdwmy])$`)
 		matches := re.FindStringSubmatch(str)
 		if len(matches) == 3 {
@@ -107,9 +107,9 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 				return time.Time{}, GranularityUnknown, false
 			}
 
-			// 确保数字是正数
+			// Ensure number is positive
 			if num <= 0 {
-				// 对于0d-ago已经特殊处理，其他0或负数都是无效的
+				// 0d-ago is already specially handled, other 0 or negative values are invalid
 				if num == 0 && matches[2] != "d" {
 					return time.Time{}, GranularityUnknown, false
 				}
@@ -121,19 +121,19 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 			var granularity TimeGranularity
 
 			switch matches[2] {
-			case "h": // 小时
+			case "h": // hour
 				resultTime = now.Add(-time.Duration(num) * time.Hour)
 				granularity = GranularityHour
-			case "d": // 天
+			case "d": // day
 				resultTime = now.AddDate(0, 0, -num)
 				granularity = GranularityDay
-			case "w": // 周
+			case "w": // week
 				resultTime = now.AddDate(0, 0, -num*7)
 				granularity = GranularityDay
-			case "m": // 月
+			case "m": // month
 				resultTime = now.AddDate(0, -num, 0)
 				granularity = GranularityMonth
-			case "y": // 年
+			case "y": // year
 				resultTime = now.AddDate(-num, 0, 0)
 				granularity = GranularityYear
 			default:
@@ -143,10 +143,10 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 			return resultTime, granularity, true
 		}
 
-		// 尝试标准 duration 解析
+		// Try standard duration parsing
 		dur, err := time.ParseDuration(str)
 		if err == nil {
-			// 根据duration单位确定粒度
+			// Determine granularity based on duration unit
 			hours := dur.Hours()
 			if hours < 1 {
 				return time.Now().Add(-dur), GranularitySecond, true
@@ -160,7 +160,7 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 		return time.Time{}, GranularityUnknown, false
 	}
 
-	// 处理季度: 2006Q1, 2006Q2, 2006Q3, 2006Q4
+	// Handle quarter: 2006Q1, 2006Q2, 2006Q3, 2006Q4
 	if matched, _ := regexp.MatchString(`^\d{4}Q[1-4]$`, str); matched {
 		re := regexp.MustCompile(`^(\d{4})Q([1-4])$`)
 		matches := re.FindStringSubmatch(str)
@@ -168,19 +168,19 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 			year, _ := strconv.Atoi(matches[1])
 			quarter, _ := strconv.Atoi(matches[2])
 
-			// 验证年份范围
+			// Validate year range
 			if year < 1970 || year > 9999 {
 				return time.Time{}, GranularityUnknown, false
 			}
 
-			// 计算季度的开始月份
+			// Calculate quarter start month
 			startMonth := time.Month((quarter-1)*3 + 1)
 
 			return time.Date(year, startMonth, 1, 0, 0, 0, 0, time.Local), GranularityQuarter, true
 		}
 	}
 
-	// 处理年份: 2006
+	// Handle year: 2006
 	if len(str) == 4 && isDigitsOnly(str) {
 		year, err := strconv.Atoi(str)
 		if err == nil && year >= 1970 && year <= 9999 {
@@ -189,7 +189,7 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 		return time.Time{}, GranularityUnknown, false
 	}
 
-	// 处理月份: 200601 或 2006-01
+	// Handle month: 200601 or 2006-01
 	if (len(str) == 6 && isDigitsOnly(str)) || (len(str) == 7 && strings.Count(str, "-") == 1) {
 		var year, month int
 		var err error
@@ -225,9 +225,9 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 		return time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.Local), GranularityMonth, true
 	}
 
-	// 处理日期格式: 20060102 或 2006-01-02
+	// Handle date format: 20060102 or 2006-01-02
 	if len(str) == 8 && isDigitsOnly(str) {
-		// 验证年月日
+		// Validate year, month, day
 		year, _ := strconv.Atoi(str[0:4])
 		month, _ := strconv.Atoi(str[4:6])
 		day, _ := strconv.Atoi(str[6:8])
@@ -236,16 +236,16 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 			return time.Time{}, GranularityUnknown, false
 		}
 
-		// 进一步验证日期是否有效
+		// Further validate date
 		if !isValidDate(year, month, day) {
 			return time.Time{}, GranularityUnknown, false
 		}
 
-		// 直接构造时间
+		// Construct time directly
 		result := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
 		return result, GranularityDay, true
 	} else if len(str) == 10 && strings.Count(str, "-") == 2 {
-		// 验证年月日
+		// Validate year, month, day
 		parts := strings.Split(str, "-")
 		if len(parts) != 3 {
 			return time.Time{}, GranularityUnknown, false
@@ -263,17 +263,17 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 			return time.Time{}, GranularityUnknown, false
 		}
 
-		// 进一步验证日期是否有效
+		// Further validate date
 		if !isValidDate(year, month, day) {
 			return time.Time{}, GranularityUnknown, false
 		}
 
-		// 直接构造时间
+		// Construct time directly
 		result := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
 		return result, GranularityDay, true
 	}
 
-	// 处理年月日时分: 200601021504
+	// Handle year-month-day-hour-minute: 200601021504
 	if len(str) == 12 && isDigitsOnly(str) {
 		year, _ := strconv.Atoi(str[0:4])
 		month, _ := strconv.Atoi(str[4:6])
@@ -286,17 +286,17 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 			return time.Time{}, GranularityUnknown, false
 		}
 
-		// 进一步验证日期是否有效
+		// Further validate date
 		if !isValidDate(year, month, day) {
 			return time.Time{}, GranularityUnknown, false
 		}
 
-		// 直接构造时间
+		// Construct time directly
 		result := time.Date(year, time.Month(month), day, hour, minute, 0, 0, time.Local)
 		return result, GranularityMinute, true
 	}
 
-	// 处理带时间的日期: 20060102/15:04 或 2006-01-02/15:04
+	// Handle date with time: 20060102/15:04 or 2006-01-02/15:04
 	if strings.Contains(str, "/") {
 		parts := strings.Split(str, "/")
 		if len(parts) != 2 {
@@ -306,7 +306,7 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 		datePart := parts[0]
 		timePart := parts[1]
 
-		// 验证日期部分
+		// Validate date part
 		var year, month, day int
 		var err1, err2, err3 error
 
@@ -334,12 +334,12 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 			return time.Time{}, GranularityUnknown, false
 		}
 
-		// 进一步验证日期是否有效
+		// Further validate date
 		if !isValidDate(year, month, day) {
 			return time.Time{}, GranularityUnknown, false
 		}
 
-		// 验证时间部分
+		// Validate time part
 		if !regexp.MustCompile(`^\d{2}:\d{2}$`).MatchString(timePart) {
 			return time.Time{}, GranularityUnknown, false
 		}
@@ -356,12 +356,12 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 			return time.Time{}, GranularityUnknown, false
 		}
 
-		// 直接构造时间
+		// Construct time directly
 		result := time.Date(year, time.Month(month), day, hour, minute, 0, 0, time.Local)
 		return result, GranularityMinute, true
 	}
 
-	// 处理完整时间: 20060102150405
+	// Handle full datetime: 20060102150405
 	if len(str) == 14 && isDigitsOnly(str) {
 		year, _ := strconv.Atoi(str[0:4])
 		month, _ := strconv.Atoi(str[4:6])
@@ -375,33 +375,33 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 			return time.Time{}, GranularityUnknown, false
 		}
 
-		// 进一步验证日期是否有效
+		// Further validate date
 		if !isValidDate(year, month, day) {
 			return time.Time{}, GranularityUnknown, false
 		}
 
-		// 直接构造时间
+		// Construct time directly
 		result := time.Date(year, time.Month(month), day, hour, minute, second, 0, time.Local)
 		return result, GranularitySecond, true
 	}
 
-	// 处理时间戳(秒)
+	// Handle timestamp (seconds)
 	if isDigitsOnly(str) {
 		n, err := strconv.ParseInt(str, 10, 64)
 		if err == nil {
-			// 检查是否是合理的时间戳范围
-			if n >= 1000000000 && n <= 253402300799 { // 2001年到2286年的秒级时间戳
+			// Check if within reasonable timestamp range (2001 to 2286 in seconds)
+			if n >= 1000000000 && n <= 253402300799 {
 				return time.Unix(n, 0), GranularitySecond, true
 			}
 		}
 		return time.Time{}, GranularityUnknown, false
 	}
 
-	// 处理 RFC3339: 2006-01-02T15:04:05Z07:00
+	// Handle RFC3339: 2006-01-02T15:04:05Z07:00
 	if strings.Contains(str, "T") && (strings.Contains(str, "Z") || strings.Contains(str, "+") || strings.Contains(str, "-")) {
 		t, err := time.Parse(time.RFC3339, str)
 		if err != nil {
-			// 尝试不带秒的格式
+			// Try format without seconds
 			t, err = time.Parse("2006-01-02T15:04Z07:00", str)
 		}
 		if err == nil {
@@ -409,41 +409,41 @@ func timeOf(str string) (t time.Time, g TimeGranularity, ok bool) {
 		}
 	}
 
-	// 排除所有其他不支持的格式
+	// Reject all other unsupported formats
 	return time.Time{}, GranularityUnknown, false
 }
 
-// TimeOf 解析各种格式的时间点
-// 支持以下格式:
-// 1. 时间戳(秒): 1609459200
-// 2. 标准日期: 20060102, 2006-01-02
-// 3. 带时间的日期: 20060102/15:04, 2006-01-02/15:04
-// 4. 完整时间: 20060102150405
+// TimeOf parses various time point formats
+// Supported formats:
+// 1. Timestamp (seconds): 1609459200
+// 2. Standard date: 20060102, 2006-01-02
+// 3. Date with time: 20060102/15:04, 2006-01-02/15:04
+// 4. Full datetime: 20060102150405
 // 5. RFC3339: 2006-01-02T15:04:05Z07:00
-// 6. 相对时间: 5h-ago, 3d-ago, 1w-ago, 1m-ago, 1y-ago (小时、天、周、月、年)
-// 7. 自然语言: now, today, yesterday
-// 8. 年份: 2006
-// 9. 月份: 200601, 2006-01
-// 10. 季度: 2006Q1, 2006Q2, 2006Q3, 2006Q4
-// 11. 年月日时分: 200601021504
+// 6. Relative time: 5h-ago, 3d-ago, 1w-ago, 1m-ago, 1y-ago (hour, day, week, month, year)
+// 7. Natural language: now, today, yesterday
+// 8. Year: 2006
+// 9. Month: 200601, 2006-01
+// 10. Quarter: 2006Q1, 2006Q2, 2006Q3, 2006Q4
+// 11. Year-month-day-hour-minute: 200601021504
 func TimeOf(str string) (t time.Time, ok bool) {
 	t, _, ok = timeOf(str)
 	return
 }
 
-// TimeRangeOf 解析各种格式的时间范围
-// 支持以下格式:
-// 1. 单个时间点: 根据时间粒度确定合适的时间范围
-//   - 精确到秒/分钟/小时: 扩展为当天范围
-//   - 精确到天: 当天 00:00:00 ~ 23:59:59
-//   - 精确到月: 当月第一天 ~ 最后一天
-//   - 精确到季度: 季度第一天 ~ 最后一天
-//   - 精确到年: 当年第一天 ~ 最后一天
+// TimeRangeOf parses various time range formats
+// Supported formats:
+// 1. Single time point: determine appropriate range based on time granularity
+//   - Second/minute/hour precision: expand to full day range
+//   - Day precision: 00:00:00 ~ 23:59:59 of that day
+//   - Month precision: first ~ last day of month
+//   - Quarter precision: first ~ last day of quarter
+//   - Year precision: first ~ last day of year
 //
-// 2. 时间区间: 2006-01-01~2006-01-31, 2006-01-01,2006-01-31, 2006-01-01 to 2006-01-31
-// 3. 相对时间: last-7d, last-30d, last-3m, last-1y (最近7天、30天、3个月、1年)
-// 4. 特定时间段: today, yesterday, this-week, last-week, this-month, last-month, this-year, last-year
-// 5. all: 表示所有时间
+// 2. Time range: 2006-01-01~2006-01-31, 2006-01-01,2006-01-31, 2006-01-01 to 2006-01-31
+// 3. Relative time: last-7d, last-30d, last-3m, last-1y (last 7 days, 30 days, 3 months, 1 year)
+// 4. Specific periods: today, yesterday, this-week, last-week, this-month, last-month, this-year, last-year
+// 5. all: represents all time
 func TimeRangeOf(str string) (start, end time.Time, ok bool) {
 	if str == "" {
 		return time.Time{}, time.Time{}, false
@@ -451,14 +451,14 @@ func TimeRangeOf(str string) (start, end time.Time, ok bool) {
 
 	str = strings.TrimSpace(str)
 
-	// 处理 all 特殊情况
+	// Handle all special case
 	if strings.ToLower(str) == "all" {
 		start = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 		end = time.Date(9999, 12, 31, 23, 59, 59, 999999999, time.UTC)
 		return start, end, true
 	}
 
-	// 处理相对时间范围: last-7d, last-30d, last-3m, last-1y
+	// Handle relative time range: last-7d, last-30d, last-3m, last-1y
 	if matched, _ := regexp.MatchString(`^last-\d+[dwmy]$`, str); matched {
 		re := regexp.MustCompile(`^last-(\d+)([dwmy])$`)
 		matches := re.FindStringSubmatch(str)
@@ -472,19 +472,19 @@ func TimeRangeOf(str string) (start, end time.Time, ok bool) {
 			end = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location())
 
 			switch matches[2] {
-			case "d": // 天
+			case "d": // day
 				start = now.AddDate(0, 0, -num)
 				start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
 				return start, end, true
-			case "w": // 周
+			case "w": // week
 				start = now.AddDate(0, 0, -num*7)
 				start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
 				return start, end, true
-			case "m": // 月
+			case "m": // month
 				start = now.AddDate(0, -num, 0)
 				start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
 				return start, end, true
-			case "y": // 年
+			case "y": // year
 				start = now.AddDate(-num, 0, 0)
 				start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
 				return start, end, true
@@ -492,7 +492,7 @@ func TimeRangeOf(str string) (start, end time.Time, ok bool) {
 		}
 	}
 
-	// 处理时间区间: 2006-01-01~2006-01-31, 2006-01-01,2006-01-31, 2006-01-01 to 2006-01-31
+	// Handle time range: 2006-01-01~2006-01-31, 2006-01-01,2006-01-31, 2006-01-01 to 2006-01-31
 	separators := []string{"~", ",", " to "}
 	for _, sep := range separators {
 		if strings.Contains(str, sep) {
@@ -502,13 +502,13 @@ func TimeRangeOf(str string) (start, end time.Time, ok bool) {
 				endTime, endGran, endOk := timeOf(strings.TrimSpace(parts[1]))
 
 				if startOk && endOk {
-					// 根据粒度调整时间范围
+					// Adjust time range based on granularity
 					start = adjustStartTime(startTime, startGran)
 					end = adjustEndTime(endTime, endGran)
 
-					// 确保开始时间早于结束时间
+					// Ensure start time is before end time
 					if start.After(end) {
-						// 正确交换开始和结束时间
+						// Correctly swap start and end time
 						start, end = adjustStartTime(endTime, endGran), adjustEndTime(startTime, startGran)
 					}
 
@@ -518,31 +518,31 @@ func TimeRangeOf(str string) (start, end time.Time, ok bool) {
 		}
 	}
 
-	// 处理单个时间点，根据粒度确定合适的时间范围
+	// Handle single time point, determine appropriate range based on granularity
 	t, g, ok := timeOf(str)
 	if ok {
 		switch g {
 		case GranularitySecond, GranularityMinute, GranularityHour:
-			// 精确到秒/分钟/小时的时间点，扩展为当天范围
+			// Second/minute/hour precision: expand to full day range
 			start = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 			end = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
 		case GranularityDay:
-			// 精确到天的时间点
+			// Day precision
 			start = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 			end = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
 		case GranularityMonth:
-			// 精确到月的时间点
+			// Month precision
 			start = time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
 			end = time.Date(t.Year(), t.Month()+1, 0, 23, 59, 59, 999999999, t.Location())
 		case GranularityQuarter:
-			// 精确到季度的时间点
+			// Quarter precision
 			quarter := (t.Month()-1)/3 + 1
 			startMonth := time.Month((int(quarter)-1)*3 + 1)
 			endMonth := startMonth + 2
 			start = time.Date(t.Year(), startMonth, 1, 0, 0, 0, 0, t.Location())
 			end = time.Date(t.Year(), endMonth+1, 0, 23, 59, 59, 999999999, t.Location())
 		case GranularityYear:
-			// 精确到年的时间点
+			// Year precision
 			start = time.Date(t.Year(), 1, 1, 0, 0, 0, 0, t.Location())
 			end = time.Date(t.Year(), 12, 31, 23, 59, 59, 999999999, t.Location())
 		}
@@ -552,60 +552,60 @@ func TimeRangeOf(str string) (start, end time.Time, ok bool) {
 	return time.Time{}, time.Time{}, false
 }
 
-// adjustStartTime 根据时间粒度调整开始时间
+// adjustStartTime adjusts start time based on time granularity
 func adjustStartTime(t time.Time, g TimeGranularity) time.Time {
 	switch g {
 	case GranularitySecond, GranularityMinute, GranularityHour:
-		// 对于精确到秒/分钟/小时的时间，保持原样
+		// For second/minute/hour precision, keep as is
 		return t
 	case GranularityDay:
-		// 精确到天，设置为当天开始
+		// Day precision: set to start of day
 		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 	case GranularityMonth:
-		// 精确到月，设置为当月第一天
+		// Month precision: set to first day of month
 		return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
 	case GranularityQuarter:
-		// 精确到季度，设置为季度第一天
+		// Quarter precision: set to first day of quarter
 		quarter := (t.Month()-1)/3 + 1
 		startMonth := time.Month((int(quarter)-1)*3 + 1)
 		return time.Date(t.Year(), startMonth, 1, 0, 0, 0, 0, t.Location())
 	case GranularityYear:
-		// 精确到年，设置为当年第一天
+		// Year precision: set to first day of year
 		return time.Date(t.Year(), 1, 1, 0, 0, 0, 0, t.Location())
 	default:
-		// 未知粒度，默认为当天开始
+		// Unknown granularity, default to start of day
 		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 	}
 }
 
-// adjustEndTime 根据时间粒度调整结束时间
+// adjustEndTime adjusts end time based on time granularity
 func adjustEndTime(t time.Time, g TimeGranularity) time.Time {
 	switch g {
 	case GranularitySecond, GranularityMinute, GranularityHour:
-		// 对于精确到秒/分钟/小时的时间，保持原样
+		// For second/minute/hour precision, keep as is
 		return t
 	case GranularityDay:
-		// 精确到天，设置为当天结束
+		// Day precision: set to end of day
 		return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
 	case GranularityMonth:
-		// 精确到月，设置为当月最后一天
+		// Month precision: set to last day of month
 		return time.Date(t.Year(), t.Month()+1, 0, 23, 59, 59, 999999999, t.Location())
 	case GranularityQuarter:
-		// 精确到季度，设置为季度最后一天
+		// Quarter precision: set to last day of quarter
 		quarter := (t.Month()-1)/3 + 1
 		startMonth := time.Month((int(quarter)-1)*3 + 1)
 		endMonth := startMonth + 2
 		return time.Date(t.Year(), endMonth+1, 0, 23, 59, 59, 999999999, t.Location())
 	case GranularityYear:
-		// 精确到年，设置为当年最后一天
+		// Year precision: set to last day of year
 		return time.Date(t.Year(), 12, 31, 23, 59, 59, 999999999, t.Location())
 	default:
-		// 未知粒度，默认为当天结束
+		// Unknown granularity, default to end of day
 		return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
 	}
 }
 
-// isDigitsOnly 检查字符串是否只包含数字
+// isDigitsOnly checks if string contains only digits
 func isDigitsOnly(s string) bool {
 	for _, c := range s {
 		if c < '0' || c > '9' {
@@ -615,16 +615,16 @@ func isDigitsOnly(s string) bool {
 	return len(s) > 0
 }
 
-// isValidDate 检查日期是否有效
+// isValidDate checks if date is valid
 func isValidDate(year, month, day int) bool {
-	// 检查月份的天数
+	// Check days in month
 	daysInMonth := 31
 
 	switch month {
 	case 4, 6, 9, 11:
 		daysInMonth = 30
 	case 2:
-		// 闰年判断
+		// Leap year check
 		if (year%4 == 0 && year%100 != 0) || year%400 == 0 {
 			daysInMonth = 29
 		} else {
@@ -638,21 +638,21 @@ func isValidDate(year, month, day int) bool {
 func PerfectTimeFormat(start time.Time, end time.Time) string {
 	endTime := end
 
-	// 如果结束时间是某一天的 0 点整，将其减去 1 秒，视为前一天的结束
+	// If end time is exactly midnight (00:00:00), subtract 1 second to treat as end of previous day
 	if endTime.Hour() == 0 && endTime.Minute() == 0 && endTime.Second() == 0 && endTime.Nanosecond() == 0 {
-		endTime = endTime.Add(-time.Second) // 减去 1 秒
+		endTime = endTime.Add(-time.Second)
 	}
 
-	// 判断是否跨年
+	// Check if spans multiple years
 	if start.Year() != endTime.Year() {
-		return "2006-01-02 15:04:05" // 完整格式，包含年月日时分秒
+		return "2006-01-02 15:04:05" // Full format with year-month-day hour:minute:second
 	}
 
-	// 判断是否跨天（但在同一年内）
+	// Check if spans multiple days (within same year)
 	if start.YearDay() != endTime.YearDay() {
-		return "01-02 15:04:05" // 月日时分秒格式
+		return "01-02 15:04:05" // Month-day hour:minute:second format
 	}
 
-	// 在同一天内
-	return "15:04:05" // 只显示时分秒
+	// Within the same day
+	return "15:04:05" // Hour:minute:second only
 }

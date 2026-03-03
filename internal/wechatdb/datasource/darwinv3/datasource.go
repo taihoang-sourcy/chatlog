@@ -123,30 +123,30 @@ func (ds *DataSource) initMessageDbs() error {
 		}
 		return err
 	}
-	// 处理每个数据库文件
+	// Process each database file
 	talkerDBMap := make(map[string]string)
 	for _, filePath := range dbPaths {
 		db, err := ds.dbm.OpenDB(filePath)
 		if err != nil {
-			log.Err(err).Msgf("获取数据库 %s 失败", filePath)
+			log.Err(err).Msgf("failed to get database %s", filePath)
 			continue
 		}
 
-		// 获取所有表名
+		// Get all table names
 		rows, err := db.Query("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'Chat_%'")
 		if err != nil {
-			log.Err(err).Msgf("数据库 %s 中没有 Chat 表", filePath)
+			log.Err(err).Msgf("no Chat table in database %s", filePath)
 			continue
 		}
 
 		for rows.Next() {
 			var tableName string
 			if err := rows.Scan(&tableName); err != nil {
-				log.Err(err).Msgf("数据库 %s 扫描表名失败", filePath)
+				log.Err(err).Msgf("failed to scan table names in database %s", filePath)
 				continue
 			}
 
-			// 从表名中提取可能的talker信息
+			// Extract possible talker info from table name
 			talkerMd5 := extractTalkerFromTableName(tableName)
 			if talkerMd5 == "" {
 				continue
@@ -171,7 +171,7 @@ func (ds *DataSource) initChatRoomDb() error {
 
 	rows, err := db.Query("SELECT m_nsUsrName, IFNULL(nickname,\"\") FROM GroupMember")
 	if err != nil {
-		log.Err(err).Msg("获取群聊成员失败")
+		log.Err(err).Msg("failed to get chat room members")
 		return nil
 	}
 
@@ -180,7 +180,7 @@ func (ds *DataSource) initChatRoomDb() error {
 		var user string
 		var nickName string
 		if err := rows.Scan(&user, &nickName); err != nil {
-			log.Err(err).Msg("扫描表名失败")
+			log.Err(err).Msg("failed to scan table names")
 			continue
 		}
 		user2DisplayName[user] = nickName
@@ -196,16 +196,16 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 		return nil, errors.ErrTalkerEmpty
 	}
 
-	// 解析talker参数，支持多个talker（以英文逗号分隔）
+	// Parse talker param, supports multiple talkers (comma-separated)
 	talkers := util.Str2List(talker, ",")
 	if len(talkers) == 0 {
 		return nil, errors.ErrTalkerEmpty
 	}
 
-	// 解析sender参数，支持多个发送者（以英文逗号分隔）
+	// Parse sender param, supports multiple senders (comma-separated)
 	senders := util.Str2List(sender, ",")
 
-	// 预编译正则表达式（如果有keyword）
+	// Precompile regex (if keyword provided)
 	var regex *regexp.Regexp
 	if keyword != "" {
 		var err error
@@ -215,34 +215,34 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 		}
 	}
 
-	// 从每个相关数据库中查询消息，并在读取时进行过滤
+	// Query messages from each relevant database, filter while reading
 	filteredMessages := []*model.Message{}
 
-	// 对每个talker进行查询
+	// Query for each talker
 	for _, talkerItem := range talkers {
-		// 检查上下文是否已取消
+		// Check if context is cancelled
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 
-		// 在 darwinv3 中，需要先找到对应的数据库
+		// In darwinv3, need to find corresponding database first
 		_talkerMd5Bytes := md5.Sum([]byte(talkerItem))
 		talkerMd5 := hex.EncodeToString(_talkerMd5Bytes[:])
 		dbPath, ok := ds.talkerDBMap[talkerMd5]
 		if !ok {
-			// 如果找不到对应的数据库，跳过此talker
+			// If corresponding database not found, skip this talker
 			continue
 		}
 
 		db, err := ds.dbm.OpenDB(dbPath)
 		if err != nil {
-			log.Error().Msgf("数据库 %s 未打开", dbPath)
+			log.Error().Msgf("database %s not opened", dbPath)
 			continue
 		}
 
 		tableName := fmt.Sprintf("Chat_%s", talkerMd5)
 
-		// 构建查询条件
+		// Build query conditions
 		query := fmt.Sprintf(`
 			SELECT msgCreateTime, msgContent, messageType, mesDes
 			FROM %s 
@@ -250,18 +250,18 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 			ORDER BY msgCreateTime ASC
 		`, tableName)
 
-		// 执行查询
+		// Execute query
 		rows, err := db.QueryContext(ctx, query, startTime.Unix(), endTime.Unix())
 		if err != nil {
-			// 如果表不存在，跳过此talker
+			// If table does not exist, skip this talker
 			if strings.Contains(err.Error(), "no such table") {
 				continue
 			}
-			log.Err(err).Msgf("从数据库 %s 查询消息失败", dbPath)
+			log.Err(err).Msgf("failed to query messages from database %s", dbPath)
 			continue
 		}
 
-		// 处理查询结果，在读取时进行过滤
+		// Process query results, filter while reading
 		for rows.Next() {
 			var msg model.MessageDarwinV3
 			err := rows.Scan(
@@ -272,14 +272,14 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 			)
 			if err != nil {
 				rows.Close()
-				log.Err(err).Msgf("扫描消息行失败")
+				log.Err(err).Msgf("failed to scan message row")
 				continue
 			}
 
-			// 将消息包装为通用模型
+			// Wrap message into common model
 			message := msg.Wrap(talkerItem)
 
-			// 应用sender过滤
+			// Apply sender filter
 			if len(senders) > 0 {
 				senderMatch := false
 				for _, s := range senders {
@@ -289,32 +289,32 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 					}
 				}
 				if !senderMatch {
-					continue // 不匹配sender，跳过此消息
+					continue // Sender mismatch, skip message
 				}
 			}
 
-			// 应用keyword过滤
+			// Apply keyword filter
 			if regex != nil {
 				plainText := message.PlainTextContent()
 				if !regex.MatchString(plainText) {
-					continue // 不匹配keyword，跳过此消息
+					continue // Keyword mismatch, skip message
 				}
 			}
 
-			// 通过所有过滤条件，保留此消息
+			// Passed all filters, keep message
 			filteredMessages = append(filteredMessages, message)
 
-			// 检查是否已经满足分页处理数量
+			// Check if pagination limit reached
 			if limit > 0 && len(filteredMessages) >= offset+limit {
-				// 已经获取了足够的消息，可以提前返回
+				// Got enough messages, can return early
 				rows.Close()
 
-				// 对所有消息按时间排序
+				// Sort all messages by time
 				sort.Slice(filteredMessages, func(i, j int) bool {
 					return filteredMessages[i].Seq < filteredMessages[j].Seq
 				})
 
-				// 处理分页
+				// Handle pagination
 				if offset >= len(filteredMessages) {
 					return []*model.Message{}, nil
 				}
@@ -328,13 +328,13 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 		rows.Close()
 	}
 
-	// 对所有消息按时间排序
-	// FIXME 不同 talker 需要使用 Time 排序
+	// Sort all messages by time
+	// FIXME Need to sort by Time for different talkers
 	sort.Slice(filteredMessages, func(i, j int) bool {
 		return filteredMessages[i].Time.Before(filteredMessages[j].Time)
 	})
 
-	// 处理分页
+	// Handle pagination
 	if limit > 0 {
 		if offset >= len(filteredMessages) {
 			return []*model.Message{}, nil
@@ -349,7 +349,7 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 	return filteredMessages, nil
 }
 
-// 从表名中提取 talker
+// Extract talker from table name
 func extractTalkerFromTableName(tableName string) string {
 
 	if !strings.HasPrefix(tableName, "Chat_") {
@@ -363,24 +363,24 @@ func extractTalkerFromTableName(tableName string) string {
 	return strings.TrimPrefix(tableName, "Chat_")
 }
 
-// GetContacts 实现获取联系人信息的方法
+// GetContacts implements the method to get contact info
 func (ds *DataSource) GetContacts(ctx context.Context, key string, limit, offset int) ([]*model.Contact, error) {
 	var query string
 	var args []interface{}
 
 	if key != "" {
-		// 按照关键字查询
+		// Query by keyword
 		query = `SELECT IFNULL(m_nsUsrName,""), IFNULL(nickname,""), IFNULL(m_nsRemark,""), m_uiSex, IFNULL(m_nsAliasName,"") 
 				FROM WCContact 
 				WHERE m_nsUsrName = ? OR nickname = ? OR m_nsRemark = ? OR m_nsAliasName = ?`
 		args = []interface{}{key, key, key, key}
 	} else {
-		// 查询所有联系人
+		// Query all contacts
 		query = `SELECT IFNULL(m_nsUsrName,""), IFNULL(nickname,""), IFNULL(m_nsRemark,""), m_uiSex, IFNULL(m_nsAliasName,"") 
 				FROM WCContact`
 	}
 
-	// 添加排序、分页
+	// Add sorting and pagination
 	query += ` ORDER BY m_nsUsrName`
 	if limit > 0 {
 		query += fmt.Sprintf(" LIMIT %d", limit)
@@ -389,7 +389,7 @@ func (ds *DataSource) GetContacts(ctx context.Context, key string, limit, offset
 		}
 	}
 
-	// 执行查询
+	// Execute query
 	db, err := ds.dbm.GetDB(Contact)
 	if err != nil {
 		return nil, err
@@ -421,24 +421,24 @@ func (ds *DataSource) GetContacts(ctx context.Context, key string, limit, offset
 	return contacts, nil
 }
 
-// GetChatRooms 实现获取群聊信息的方法
+// GetChatRooms implements the method to get chat room info
 func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offset int) ([]*model.ChatRoom, error) {
 	var query string
 	var args []interface{}
 
 	if key != "" {
-		// 按照关键字查询
+		// Query by keyword
 		query = `SELECT IFNULL(m_nsUsrName,""), IFNULL(nickname,""), IFNULL(m_nsRemark,""), IFNULL(m_nsChatRoomMemList,""), IFNULL(m_nsChatRoomAdminList,"") 
 				FROM GroupContact 
 				WHERE m_nsUsrName = ? OR nickname = ? OR m_nsRemark = ?`
 		args = []interface{}{key, key, key}
 	} else {
-		// 查询所有群聊
+		// Query all chat rooms
 		query = `SELECT IFNULL(m_nsUsrName,""), IFNULL(nickname,""), IFNULL(m_nsRemark,""), IFNULL(m_nsChatRoomMemList,""), IFNULL(m_nsChatRoomAdminList,"") 
 				FROM GroupContact`
 	}
 
-	// 添加排序、分页
+	// Add sorting and pagination
 	query += ` ORDER BY m_nsUsrName`
 	if limit > 0 {
 		query += fmt.Sprintf(" LIMIT %d", limit)
@@ -447,7 +447,7 @@ func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offse
 		}
 	}
 
-	// 执行查询
+	// Execute query
 	db, err := ds.dbm.GetDB(ChatRoom)
 	if err != nil {
 		return nil, err
@@ -476,11 +476,11 @@ func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offse
 		chatRooms = append(chatRooms, chatRoomDarwinV3.Wrap(ds.user2DisplayName))
 	}
 
-	// 如果没有找到群聊，尝试通过联系人查找
+		// If chat room not found, try looking up via contacts
 	if len(chatRooms) == 0 && key != "" {
 		contacts, err := ds.GetContacts(ctx, key, 1, 0)
 		if err == nil && len(contacts) > 0 && strings.HasSuffix(contacts[0].UserName, "@chatroom") {
-			// 再次尝试通过用户名查找群聊
+			// Try again to find chat room by username
 			rows, err := db.QueryContext(ctx,
 				`SELECT IFNULL(m_nsUsrName,""), IFNULL(nickname,""), IFNULL(m_nsRemark,""), IFNULL(m_nsChatRoomMemList,""), IFNULL(m_nsChatRoomAdminList,"") 
 				FROM GroupContact 
@@ -509,7 +509,7 @@ func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offse
 				chatRooms = append(chatRooms, chatRoomDarwinV3.Wrap(ds.user2DisplayName))
 			}
 
-			// 如果群聊记录不存在，但联系人记录存在，创建一个模拟的群聊对象
+			// If chat room record doesn't exist but contact record does, create a mock chat room object
 			if len(chatRooms) == 0 {
 				chatRooms = append(chatRooms, &model.ChatRoom{
 					Name:  contacts[0].UserName,
@@ -522,24 +522,24 @@ func (ds *DataSource) GetChatRooms(ctx context.Context, key string, limit, offse
 	return chatRooms, nil
 }
 
-// GetSessions 实现获取会话信息的方法
+// GetSessions implements the method to get session info
 func (ds *DataSource) GetSessions(ctx context.Context, key string, limit, offset int) ([]*model.Session, error) {
 	var query string
 	var args []interface{}
 
 	if key != "" {
-		// 按照关键字查询
+		// Query by keyword
 		query = `SELECT m_nsUserName, m_uLastTime 
 				FROM SessionAbstract 
 				WHERE m_nsUserName = ?`
 		args = []interface{}{key}
 	} else {
-		// 查询所有会话
+		// Query all sessions
 		query = `SELECT m_nsUserName, m_uLastTime 
 				FROM SessionAbstract`
 	}
 
-	// 添加排序、分页
+	// Add sorting and pagination
 	query += ` ORDER BY m_uLastTime DESC`
 	if limit > 0 {
 		query += fmt.Sprintf(" LIMIT %d", limit)
@@ -548,7 +548,7 @@ func (ds *DataSource) GetSessions(ctx context.Context, key string, limit, offset
 		}
 	}
 
-	// 执行查询
+	// Execute query
 	db, err := ds.dbm.GetDB(Session)
 	if err != nil {
 		return nil, err
@@ -571,15 +571,15 @@ func (ds *DataSource) GetSessions(ctx context.Context, key string, limit, offset
 			return nil, errors.ScanRowFailed(err)
 		}
 
-		// 包装成通用模型
+		// Wrap into common model
 		session := sessionDarwinV3.Wrap()
 
-		// 尝试获取联系人信息以补充会话信息
+		// Try to get contact info to enrich session info
 		contacts, err := ds.GetContacts(ctx, session.UserName, 1, 0)
 		if err == nil && len(contacts) > 0 {
 			session.NickName = contacts[0].DisplayName()
 		} else {
-			// 尝试获取群聊信息
+			// Try to get chat room info
 			chatRooms, err := ds.GetChatRooms(ctx, session.UserName, 1, 0)
 			if err == nil && len(chatRooms) > 0 {
 				session.NickName = chatRooms[0].DisplayName()
@@ -610,7 +610,7 @@ JOIN
 WHERE 
     r.mediaMd5 = ?`
 	args := []interface{}{key}
-	// 执行查询
+	// Execute query
 	db, err := ds.dbm.GetDB(Media)
 	if err != nil {
 		return nil, err
@@ -637,7 +637,7 @@ WHERE
 			return nil, errors.ScanRowFailed(err)
 		}
 
-		// 包装成通用模型
+		// Wrap into common model
 		media = mediaDarwinV3.Wrap()
 	}
 
@@ -648,7 +648,7 @@ WHERE
 	return media, nil
 }
 
-// Close 实现关闭数据库连接的方法
+// Close implements the method to close database connection
 func (ds *DataSource) Close() error {
 	return ds.dbm.Close()
 }

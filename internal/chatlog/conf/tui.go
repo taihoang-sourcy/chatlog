@@ -5,6 +5,12 @@ type TUIConfig struct {
 	LastAccount string          `mapstructure:"last_account" json:"last_account"`
 	History     []ProcessConfig `mapstructure:"history" json:"history"`
 	Webhook     *Webhook        `mapstructure:"webhook" json:"webhook"`
+	Postgres    *PostgresConfig `mapstructure:"postgres" json:"postgres"`
+}
+
+// PostgresConfig holds PostgreSQL connection settings for sync.
+type PostgresConfig struct {
+	URL string `mapstructure:"url" json:"url"`
 }
 
 var TUIDefaults = map[string]any{}

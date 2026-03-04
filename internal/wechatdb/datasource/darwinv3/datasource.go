@@ -244,7 +244,7 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 
 		// Build query conditions
 		query := fmt.Sprintf(`
-			SELECT msgCreateTime, msgContent, messageType, mesDes
+			SELECT msgCreateTime, msgContent, messageType, mesDes, CompressContent
 			FROM %s 
 			WHERE msgCreateTime >= ? AND msgCreateTime <= ? 
 			ORDER BY msgCreateTime ASC
@@ -269,6 +269,7 @@ func (ds *DataSource) GetMessages(ctx context.Context, startTime, endTime time.T
 				&msg.MsgContent,
 				&msg.MessageType,
 				&msg.MesDes,
+				&msg.CompressContent,
 			)
 			if err != nil {
 				rows.Close()

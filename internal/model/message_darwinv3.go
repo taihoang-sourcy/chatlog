@@ -3,6 +3,8 @@ package model
 import (
 	"strings"
 	"time"
+
+	"github.com/sjzar/chatlog/pkg/util/lz4"
 )
 
 // CREATE TABLE Chat_md5(talker)(
@@ -23,10 +25,11 @@ import (
 // ConBlob BLOB
 // )
 type MessageDarwinV3 struct {
-	MsgCreateTime int64  `json:"msgCreateTime"`
-	MsgContent    string `json:"msgContent"`
-	MessageType   int64  `json:"messageType"`
-	MesDes        int    `json:"mesDes"` // 0: 发送, 1: 接收
+	MsgCreateTime    int64  `json:"msgCreateTime"`
+	MsgContent       string `json:"msgContent"`
+	MessageType      int64  `json:"messageType"`
+	MesDes           int    `json:"mesDes"` // 0: 发送, 1: 接收
+	CompressContent  []byte `json:"CompressContent"`
 }
 
 func (m *MessageDarwinV3) Wrap(talker string) *Message {
@@ -41,6 +44,12 @@ func (m *MessageDarwinV3) Wrap(talker string) *Message {
 	}
 
 	content := m.MsgContent
+	if _m.Type == 49 && content == "" && len(m.CompressContent) > 0 {
+		b, err := lz4.Decompress(m.CompressContent)
+		if err == nil {
+			content = string(b)
+		}
+	}
 	if _m.IsChatRoom {
 		split := strings.SplitN(content, ":\n", 2)
 		if len(split) == 2 {

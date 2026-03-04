@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/sjzar/chatlog/internal/chatlog/conf"
@@ -12,6 +13,8 @@ import (
 	"github.com/sjzar/chatlog/internal/chatlog/database"
 	"github.com/sjzar/chatlog/internal/chatlog/http"
 	"github.com/sjzar/chatlog/internal/chatlog/wechat"
+	"github.com/sjzar/chatlog/internal/postgres"
+	"github.com/sjzar/chatlog/internal/wechatdb"
 	iwechat "github.com/sjzar/chatlog/internal/wechat"
 	"github.com/sjzar/chatlog/pkg/config"
 	"github.com/sjzar/chatlog/pkg/util"
@@ -404,4 +407,182 @@ func (m *Manager) CommandHTTPServer(configPath string, cmdConf map[string]any) e
 	}()
 
 	return m.http.ListenAndServe()
+}
+
+// CommandSync syncs raw conversation data to PostgreSQL.
+func (m *Manager) CommandSync(configPath string, cmdConf map[string]any) error {
+	tuiConf, _, err := conf.LoadTUIConfig(configPath)
+	if err != nil {
+		return err
+	}
+
+	postgresURL, _ := cmdConf["postgres_url"].(string)
+	if postgresURL == "" && tuiConf.Postgres != nil {
+		postgresURL = tuiConf.Postgres.URL
+	}
+	if postgresURL == "" {
+		return fmt.Errorf("postgres URL is required (use --postgres-url, config postgres.url, or CHATLOG_POSTGRES_URL)")
+	}
+
+	pg, err := postgres.New(context.Background(), postgresURL)
+	if err != nil {
+		return fmt.Errorf("connect to postgres: %w", err)
+	}
+	defer pg.Close()
+
+	// Determine accounts to sync
+	var accounts []conf.ProcessConfig
+	if workDir, ok := cmdConf["work_dir"].(string); ok && workDir != "" {
+		// Single work-dir mode (from flags)
+		platform, _ := cmdConf["platform"].(string)
+		if platform == "" {
+			platform = "darwin"
+		}
+		version, _ := cmdConf["version"].(int)
+		if version == 0 {
+			version = 3
+		}
+		account, _ := cmdConf["account"].(string)
+		if account == "" {
+			account = "sync-" + workDir
+		}
+		accounts = []conf.ProcessConfig{{
+			Account:  account,
+			Platform: platform,
+			Version:  version,
+			WorkDir:  workDir,
+		}}
+	} else {
+		// History accounts mode
+		history := tuiConf.ParseHistory()
+		if len(history) == 0 {
+			return fmt.Errorf("no accounts in history; add accounts via TUI or use --work-dir")
+		}
+		if accFilter, ok := cmdConf["account"].(string); ok && accFilter != "" {
+			if pc, ok := history[accFilter]; ok {
+				accounts = []conf.ProcessConfig{pc}
+			} else {
+				return fmt.Errorf("account %q not found in history", accFilter)
+			}
+		} else {
+			for _, pc := range history {
+				if pc.WorkDir != "" {
+					accounts = append(accounts, pc)
+				}
+			}
+		}
+	}
+
+	for _, pc := range accounts {
+		if pc.WorkDir == "" {
+			log.Info().Msgf("skip account %s: no work dir", pc.Account)
+			continue
+		}
+		if err := m.syncAccount(context.Background(), pg, &pc); err != nil {
+			return fmt.Errorf("sync account %s: %w", pc.Account, err)
+		}
+	}
+	return nil
+}
+
+const syncBatchSize = 5000
+
+func (m *Manager) syncAccount(ctx context.Context, pg *postgres.Conn, pc *conf.ProcessConfig) error {
+	log.Info().Msgf("syncing account %s from %s", pc.Account, pc.WorkDir)
+	db, err := wechatdb.New(pc.WorkDir, pc.Platform, pc.Version)
+	if err != nil {
+		return fmt.Errorf("open wechatdb: %w", err)
+	}
+	defer db.Close()
+
+	accountID, err := pg.UpsertAccount(ctx, pc.Account, pc.Platform, pc.Version, pc.DataDir)
+	if err != nil {
+		return fmt.Errorf("upsert account: %w", err)
+	}
+
+	// Sync contacts
+	contactsResp, err := db.GetContacts("", 0, 0)
+	if err != nil {
+		log.Warn().Err(err).Msg("get contacts failed")
+	} else if len(contactsResp.Items) > 0 {
+		n, err := pg.UpsertContacts(ctx, accountID, contactsResp.Items)
+		if err != nil {
+			return fmt.Errorf("upsert contacts: %w", err)
+		}
+		log.Info().Msgf("synced %d contacts", n)
+	}
+
+	// Sync chat rooms
+	chatRoomsResp, err := db.GetChatRooms("", 0, 0)
+	if err != nil {
+		log.Warn().Err(err).Msg("get chat rooms failed")
+	} else if len(chatRoomsResp.Items) > 0 {
+		n, err := pg.UpsertChatRooms(ctx, accountID, chatRoomsResp.Items)
+		if err != nil {
+			return fmt.Errorf("upsert chat rooms: %w", err)
+		}
+		log.Info().Msgf("synced %d chat rooms", n)
+	}
+
+	// Sync messages incrementally
+	lastSynced, err := pg.GetLastSyncedAt(ctx, accountID)
+	if err != nil {
+		return fmt.Errorf("get last synced: %w", err)
+	}
+	startTime := lastSynced
+	if startTime.IsZero() {
+		startTime = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+	}
+	endTime := time.Now().Add(time.Minute * 10) // buffer for in-flight messages
+
+	sessionsResp, err := db.GetSessions("", 0, 0)
+	if err != nil {
+		return fmt.Errorf("get sessions: %w", err)
+	}
+	if len(sessionsResp.Items) == 0 {
+		log.Info().Msg("no sessions to sync")
+		return nil
+	}
+
+	var totalMessages int
+	var latestTime time.Time
+	for _, sess := range sessionsResp.Items {
+		talker := sess.UserName
+		if talker == "" {
+			continue
+		}
+		offset := 0
+		for {
+			msgs, err := db.GetMessages(startTime, endTime, talker, "", "", syncBatchSize, offset)
+			if err != nil {
+				log.Warn().Err(err).Str("talker", talker).Msg("get messages failed")
+				break
+			}
+			if len(msgs) == 0 {
+				break
+			}
+			n, err := pg.UpsertMessages(ctx, accountID, msgs)
+			if err != nil {
+				return fmt.Errorf("upsert messages: %w", err)
+			}
+			totalMessages += n
+			if msgs[len(msgs)-1].Time.After(latestTime) {
+				latestTime = msgs[len(msgs)-1].Time
+			}
+			if len(msgs) < syncBatchSize {
+				break
+			}
+			offset += syncBatchSize
+		}
+	}
+
+	checkpoint := latestTime
+	if checkpoint.IsZero() {
+		checkpoint = endTime
+	}
+	if err := pg.SetLastSyncedAt(ctx, accountID, checkpoint); err != nil {
+		return fmt.Errorf("set last synced: %w", err)
+	}
+	log.Info().Msgf("synced %d messages, checkpoint %s", totalMessages, checkpoint.Format(time.RFC3339))
+	return nil
 }

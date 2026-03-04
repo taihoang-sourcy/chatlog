@@ -10,7 +10,7 @@
 
 # Go build output
 bin/
-chatlog
+/chatlog
 chatlog.exe
 
 # Test binary, built with `go test -c`

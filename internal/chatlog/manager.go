@@ -409,6 +409,37 @@ func (m *Manager) CommandHTTPServer(configPath string, cmdConf map[string]any) e
 	return m.http.ListenAndServe()
 }
 
+// Sync syncs the current account to PostgreSQL. Intended for TUI use.
+func (m *Manager) Sync() error {
+	postgresURL := m.ctx.GetPostgresURL()
+	if postgresURL == "" {
+		return fmt.Errorf("postgres URL is not configured (set it in Settings or config file)")
+	}
+	if m.ctx.Account == "" {
+		return fmt.Errorf("no account selected")
+	}
+	if m.ctx.WorkDir == "" {
+		return fmt.Errorf("no work directory configured")
+	}
+
+	bgCtx := context.Background()
+	pg, err := postgres.New(bgCtx, postgresURL)
+	if err != nil {
+		return fmt.Errorf("connect to postgres: %w", err)
+	}
+	defer pg.Close()
+
+	pc := conf.ProcessConfig{
+		Account:  m.ctx.Account,
+		Platform: m.ctx.Platform,
+		Version:  m.ctx.Version,
+		DataDir:  m.ctx.DataDir,
+		WorkDir:  m.ctx.WorkDir,
+	}
+	mappings := m.ctx.GetSupplierMappings()
+	return m.syncAccount(bgCtx, pg, &pc, mappings)
+}
+
 // CommandSync syncs raw conversation data to PostgreSQL.
 func (m *Manager) CommandSync(configPath string, cmdConf map[string]any) error {
 	tuiConf, _, err := conf.LoadTUIConfig(configPath)

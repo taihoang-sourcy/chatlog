@@ -423,6 +423,13 @@ func (a *App) initMenu() {
 		Selected:    a.supplierMappingSelected,
 	}
 
+	syncPostgres := &menu.Item{
+		Index:       9,
+		Name:        "Sync to PostgreSQL",
+		Description: "Sync mapped conversations to PostgreSQL",
+		Selected:    a.syncSelected,
+	}
+
 	a.menu.AddItem(getDataKey)
 	a.menu.AddItem(decryptData)
 	a.menu.AddItem(httpServer)
@@ -430,9 +437,10 @@ func (a *App) initMenu() {
 	a.menu.AddItem(setting)
 	a.menu.AddItem(selectAccount)
 	a.menu.AddItem(supplierMapping)
+	a.menu.AddItem(syncPostgres)
 
 	a.menu.AddItem(&menu.Item{
-		Index:       9,
+		Index:       10,
 		Name:        "Exit",
 		Description: "Exit the program",
 		Selected: func(i *menu.Item) {
@@ -619,6 +627,30 @@ func (a *App) settingDataDir() {
 
 	a.mainPages.AddPage("submenu2", formView, true, true)
 	a.SetFocus(formView)
+}
+
+// syncSelected handles the Sync to PostgreSQL menu item.
+func (a *App) syncSelected(i *menu.Item) {
+	modal := tview.NewModal().SetText("Syncing to PostgreSQL...")
+	a.mainPages.AddPage("modal", modal, true, true)
+	a.SetFocus(modal)
+
+	go func() {
+		err := a.m.Sync()
+
+		a.QueueUpdateDraw(func() {
+			if err != nil {
+				modal.SetText("Sync failed: " + err.Error())
+			} else {
+				modal.SetText("Sync completed successfully")
+			}
+			modal.AddButtons([]string{"OK"})
+			modal.SetDoneFunc(func(int, string) {
+				a.mainPages.RemovePage("modal")
+			})
+			a.SetFocus(modal)
+		})
+	}()
 }
 
 // supplierMappingSelected handles the Supplier Mapping menu item.

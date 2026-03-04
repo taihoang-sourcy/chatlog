@@ -185,6 +185,13 @@ func (c *Context) GetWebhook() *conf.Webhook {
 	return c.conf.Webhook
 }
 
+func (c *Context) GetPostgresURL() string {
+	if c.conf.Postgres == nil {
+		return ""
+	}
+	return c.conf.Postgres.URL
+}
+
 func (c *Context) SetHTTPEnabled(enabled bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

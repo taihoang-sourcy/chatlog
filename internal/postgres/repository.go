@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -162,5 +164,53 @@ func (c *Conn) GetLastSyncedAt(ctx context.Context, accountID uuid.UUID) (time.T
 // SetLastSyncedAt updates the last synced timestamp for an account.
 func (c *Conn) SetLastSyncedAt(ctx context.Context, accountID uuid.UUID, t time.Time) error {
 	_, err := c.pool.Exec(ctx, `UPDATE accounts SET last_synced_at = $1 WHERE id = $2`, t, accountID)
+	return err
+}
+
+// GetMaxMessageTimeForTalkers returns the maximum message time per talker for the given account.
+// Talkers with no messages are omitted from the result. Used for per-talker incremental sync.
+func (c *Conn) GetMaxMessageTimeForTalkers(ctx context.Context, accountID uuid.UUID, talkers []string) (map[string]time.Time, error) {
+	if len(talkers) == 0 {
+		return nil, nil
+	}
+	placeholders := make([]string, len(talkers))
+	args := make([]any, 0, 1+len(talkers))
+	args = append(args, accountID)
+	for i := range talkers {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		args = append(args, talkers[i])
+	}
+	query := `SELECT talker, MAX(time) AS max_time
+		FROM messages
+		WHERE account_id = $1 AND talker IN (` + strings.Join(placeholders, ", ") + `)
+		GROUP BY talker`
+	rows, err := c.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make(map[string]time.Time)
+	for rows.Next() {
+		var talker string
+		var t time.Time
+		if err := rows.Scan(&talker, &t); err != nil {
+			return nil, err
+		}
+		result[talker] = t
+	}
+	return result, rows.Err()
+}
+
+// UpdateSupplierIDForTalker updates supplier_id for all existing messages of a talker
+// when the supplier mapping has changed. Skips update when supplier_id already matches.
+func (c *Conn) UpdateSupplierIDForTalker(ctx context.Context, accountID uuid.UUID, talker, supplierID string) error {
+	var sid any
+	if supplierID != "" {
+		sid = supplierID
+	}
+	_, err := c.pool.Exec(ctx, `
+		UPDATE messages SET supplier_id = $1
+		WHERE account_id = $2 AND talker = $3 AND (supplier_id IS DISTINCT FROM $4)
+	`, sid, accountID, talker, sid)
 	return err
 }

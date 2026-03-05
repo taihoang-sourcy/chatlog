@@ -715,7 +715,7 @@ func (a *App) showSupplierMappingMenu(sessions []*model.Session, nickNames map[s
 		if displayName == "" {
 			displayName = sess.UserName
 		}
-		name := fmt.Sprintf("%s [%s]", displayName, tag)
+		name := fmt.Sprintf("[%s] %s", tag, displayName)
 
 		// Show last message content (truncated) and time as description to help identify the chat
 		desc := sess.NTime.Format("2006-01-02 15:04")

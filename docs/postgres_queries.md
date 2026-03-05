@@ -105,55 +105,34 @@ Note: `type = 1` is text; other common types: 3 (image), 34 (voice), 43 (video).
 
 ---
 
-## 7. API-like formatted output (row per message)
-
-Formats each message as `sender time\ncontent` (e.g. "我 09:09:13\nyou are old and boring").
-
-```sql
-SELECT 
-  CASE 
-    WHEN sender_name IS NOT NULL AND sender_name != '' 
-      THEN sender_name || '(' || sender || ')'
-    ELSE sender
-  END 
-  || ' ' 
-  || to_char(time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok', 'HH24:MI:SS')
-  || E'\n'
-  || COALESCE(
-       NULLIF(TRIM(content), ''),
-       contents->>'desc',
-       '[Media]'
-     )
-  AS formatted_message
-FROM messages
-WHERE account_id = (SELECT id FROM accounts WHERE account = 'wxid_pm0q1cfrdmmv12_712f')
-  AND talker = 'wxid_0zwx7rx5gr4k22'
-ORDER BY time ASC;
-```
-
----
-
-## 8. API-like formatted output (single concatenated string)
+## 7. API-like formatted output (single concatenated string)
 
 Returns one string with the entire conversation in the same format.
 
 ```sql
-SELECT string_agg(
-  CASE WHEN sender_name IS NOT NULL AND sender_name != '' 
-         THEN sender_name || '(' || sender || ')'
-       ELSE sender 
+SELECT 
+talker, 
+c.account_id,
+to_char(max(m.time) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok', 'HH24:MI:SS') as last_message,
+string_agg(
+  CASE 
+    WHEN TRIM(COALESCE(NULLIF(TRIM(c.nick_name), ''), m.sender_name, c.remark, c.alias)) != ''
+      THEN TRIM(COALESCE(NULLIF(TRIM(c.nick_name), ''), m.sender_name, c.remark, c.alias))
+    ELSE m.sender 
   END 
   || ' ' 
-  || to_char(time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok', 'HH24:MI:SS')
+  || to_char(m.time AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok', 'HH24:MI:SS')
   || E'\n'
-  || COALESCE(NULLIF(TRIM(content), ''), contents->>'desc', '[Media]')
+  || COALESCE(NULLIF(TRIM(m.content), ''), m.contents->>'desc', '[Media]')
   || E'\n\n',
   ''
-  ORDER BY time
+  ORDER BY m.time
 ) AS conversation
-FROM messages
-WHERE account_id = (SELECT id FROM accounts WHERE account = 'wxid_pm0q1cfrdmmv12_712f')
-  AND talker = 'wxid_0zwx7rx5gr4k22';
+FROM messages m
+JOIN contacts c ON c.account_id = m.account_id AND c.user_name = m.sender
+-- WHERE m.account_id = (SELECT id FROM accounts WHERE account = 'wxid_pm0q1cfrdmmv12_712f')
+  -- AND m.talker = 'wxid_0zwx7rx5gr4k22'
+group by 1, 2;
 ```
 
 Change `'Asia/Bangkok'` to your timezone if needed.

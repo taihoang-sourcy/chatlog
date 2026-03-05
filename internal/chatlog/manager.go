@@ -565,16 +565,9 @@ func (m *Manager) syncAccount(ctx context.Context, pg *postgres.Conn, pc *conf.P
 		log.Info().Msgf("synced %d chat rooms", n)
 	}
 
-	// Sync messages incrementally
-	lastSynced, err := pg.GetLastSyncedAt(ctx, accountID)
-	if err != nil {
-		return fmt.Errorf("get last synced: %w", err)
-	}
-	startTime := lastSynced
-	if startTime.IsZero() {
-		startTime = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
-	}
+	// Sync messages with per-talker incremental start (newly mapped talkers get full backfill)
 	endTime := time.Now().Add(time.Minute * 10) // buffer for in-flight messages
+	epochStart := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	sessionsResp, err := db.GetSessions("", 0, 0)
 	if err != nil {
@@ -583,6 +576,21 @@ func (m *Manager) syncAccount(ctx context.Context, pg *postgres.Conn, pc *conf.P
 	if len(sessionsResp.Items) == 0 {
 		log.Info().Msg("no sessions to sync")
 		return nil
+	}
+
+	// Build mapped talkers and fetch per-talker max message times (for incremental start)
+	mappedTalkers := make([]string, 0)
+	seen := make(map[string]bool)
+	for _, sess := range sessionsResp.Items {
+		talker := sess.UserName
+		if talker != "" && supplierMappings[talker] != "" && !seen[talker] {
+			seen[talker] = true
+			mappedTalkers = append(mappedTalkers, talker)
+		}
+	}
+	maxTimes, err := pg.GetMaxMessageTimeForTalkers(ctx, accountID, mappedTalkers)
+	if err != nil {
+		return fmt.Errorf("get max message times: %w", err)
 	}
 
 	var totalMessages int
@@ -596,6 +604,16 @@ func (m *Manager) syncAccount(ctx context.Context, pg *postgres.Conn, pc *conf.P
 		if !mapped {
 			continue
 		}
+		startTime := maxTimes[talker]
+		if startTime.IsZero() {
+			startTime = epochStart // newly mapped talker: full backfill
+		}
+
+		// Update supplier_id on existing messages (handles re-mapping)
+		if err := pg.UpdateSupplierIDForTalker(ctx, accountID, talker, supplierID); err != nil {
+			return fmt.Errorf("update supplier for talker %s: %w", talker, err)
+		}
+
 		offset := 0
 		for {
 			msgs, err := db.GetMessages(startTime, endTime, talker, "", "", syncBatchSize, offset)

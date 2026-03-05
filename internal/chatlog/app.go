@@ -673,35 +673,66 @@ func (a *App) supplierMappingSelected(i *menu.Item) {
 			}
 		}
 		resp, err := a.m.db.GetSessions("", 0, 0)
+		if err != nil {
+			a.QueueUpdateDraw(func() {
+				a.mainPages.RemovePage("modal")
+				a.showError(fmt.Errorf("failed to load sessions: %v", err))
+			})
+			return
+		}
+		// Build nickname lookup from contacts
+		nickNames := make(map[string]string)
+		if contactsResp, err := a.m.db.GetContacts("", 0, 0); err == nil {
+			for _, c := range contactsResp.Items {
+				if c.Remark != "" {
+					nickNames[c.UserName] = c.Remark
+				} else if c.NickName != "" {
+					nickNames[c.UserName] = c.NickName
+				}
+			}
+		}
 		a.QueueUpdateDraw(func() {
 			a.mainPages.RemovePage("modal")
-			if err != nil {
-				a.showError(fmt.Errorf("failed to load sessions: %v", err))
-				return
-			}
-			a.showSupplierMappingMenu(resp.Items)
+			a.showSupplierMappingMenu(resp.Items, nickNames)
 		})
 	}()
 }
 
 // showSupplierMappingMenu shows a submenu listing all sessions with their mapping status.
-func (a *App) showSupplierMappingMenu(sessions []*model.Session) {
+func (a *App) showSupplierMappingMenu(sessions []*model.Session, nickNames map[string]string) {
 	subMenu := menu.NewSubMenu("Supplier Mapping")
 	mappings := a.ctx.GetSupplierMappings()
 
 	for idx, sess := range sessions {
-		tag := "[unmapped]"
+		tag := "unmapped"
 		if sid, ok := mappings[sess.UserName]; ok {
-			tag = fmt.Sprintf("[%s]", sid)
+			tag = sid
 		}
-		name := fmt.Sprintf("%s (%s) %s", sess.NickName, sess.UserName, tag)
+		displayName := nickNames[sess.UserName]
+		if displayName == "" {
+			displayName = sess.NickName
+		}
+		if displayName == "" {
+			displayName = sess.UserName
+		}
+		name := fmt.Sprintf("%s [%s]", displayName, tag)
+
+		// Show last message content (truncated) and time as description to help identify the chat
+		desc := sess.NTime.Format("2006-01-02 15:04")
+		if sess.Content != "" {
+			content := sess.Content
+			if len(content) > 30 {
+				content = content[:30] + "..."
+			}
+			desc = content + " | " + desc
+		}
 
 		session := sess
 		currentSID := mappings[sess.UserName]
 		subMenu.AddItem(&menu.Item{
 			Index:       idx + 1,
 			Name:        name,
-			Description: "Edit supplier mapping",
+			Description: desc,
 			Selected: func(*menu.Item) {
 				a.showSupplierMappingForm(session, currentSID)
 			},
